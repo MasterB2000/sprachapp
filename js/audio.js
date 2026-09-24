@@ -126,22 +126,61 @@ export function level() {
 
 let current = null;
 
-export function playBlob(blob, { rate = 1 } = {}) {
+// Spielt eine Aufnahme ab. Ergebnis: true = gespielt, sonst eine Fehlerbeschreibung.
+// Scheitert das Audio-Element (kommt auf manchen Handys bei eigenen Aufnahmen vor),
+// springt Web Audio ein.
+export async function playBlob(blob, { rate = 1 } = {}) {
+  if (!blob) return 'keine Aufnahme';
+  if (!blob.size) return 'Aufnahme ist leer';
+  const first = await playWithElement(blob, rate);
+  if (first === true || first === 'gestoppt') return first;
+  const second = await playWithWebAudio(blob, rate);
+  return second === true ? true : `${first}; Ersatzweg: ${second}`;
+}
+
+function playWithElement(blob, rate) {
   return new Promise((resolve) => {
-    if (!blob) return resolve();
     stopPlayback();
     const url = URL.createObjectURL(blob);
-    current = new Audio(url);
-    current.playbackRate = rate; // Tonhöhe bleibt erhalten
-    const done = () => { URL.revokeObjectURL(url); current = null; resolve(); };
-    current.onended = done;
-    current.onerror = done;
-    current.play().catch(done);
+    const el = new Audio(url);
+    el.playbackRate = rate; // Tonhöhe bleibt erhalten
+    let started = false;
+    const done = (result) => {
+      if (current?.el !== el) return;
+      URL.revokeObjectURL(url);
+      current = null;
+      resolve(result);
+    };
+    current = { el, stop: () => { el.pause(); done('gestoppt'); } };
+    el.onplaying = () => { started = true; };
+    el.onended = () => done(started ? true : 'endete sofort');
+    el.onerror = () => done('Audio-Element: ' + (el.error?.message || el.error?.code || 'Fehler'));
+    el.play().catch((err) => done('Audio-Element: ' + err.name));
   });
 }
 
+async function playWithWebAudio(blob, rate) {
+  try {
+    const ctx = new AudioContext();
+    const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
+    return await new Promise((resolve) => {
+      stopPlayback();
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.playbackRate.value = rate;
+      src.connect(ctx.destination);
+      const done = (result) => { if (current?.src !== src) return; current = null; ctx.close(); resolve(result); };
+      current = { src, stop: () => { try { src.stop(); } catch {} done('gestoppt'); } };
+      src.onended = () => done(true);
+      src.start();
+    });
+  } catch (err) {
+    return 'Web Audio: ' + (err.message || err.name);
+  }
+}
+
 export function stopPlayback() {
-  if (current) { current.pause(); current.onended?.(); }
+  current?.stop();
 }
 
 export const wait = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -213,7 +213,8 @@ async function toggleRecording() {
     cancelAnimationFrame(meterFrame);
     btn.classList.remove('recording');
     const blob = await audio.stopRecording();
-    s.card.blob = blob;
+    if (!blob || blob.size < 500) toast('Die Aufnahme ist leer – das Mikrofon hat nichts geliefert.', { ms: 8000 });
+    s.card.blob = blob?.size ? blob : null;
     if (blob) db.put('recordings', { id: s.card.phrase.id, blob, date: srs.today() });
     reveal();
   }
@@ -306,7 +307,10 @@ async function play(kind) {
     await audio.wait(lv().gap);
     if (token !== s.playToken) return;
   }
-  if (kind !== 'model') await audio.playBlob(blob);
+  if (kind !== 'model') {
+    const result = await audio.playBlob(blob);
+    if (result !== true && result !== 'gestoppt') toast('Deine Aufnahme ließ sich nicht abspielen (' + result + ').', { ms: 8000 });
+  }
   if (token === s.playToken) setPlaying(null);
 }
 
