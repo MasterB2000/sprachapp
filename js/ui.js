@@ -11,13 +11,28 @@ export function esc(s) {
 }
 
 let toastTimer;
-export function toast(msg) {
+// Kurzer Hinweis unten. Optional mit einer Aktion, z. B. { label: 'Rückgängig', run: () => … }.
+export function toast(msg, { action = null, ms = 3200 } = {}) {
   let el = document.querySelector('.toast');
-  if (!el) { el = h('<div class="toast"></div>'); document.body.appendChild(el); }
-  el.textContent = msg;
+  if (!el) { el = h('<div class="toast"><span></span><button hidden></button></div>'); document.body.appendChild(el); }
+  el.querySelector('span').textContent = msg;
+  const btn = el.querySelector('button');
+  btn.hidden = !action;
+  btn.onclick = null;
+  if (action) {
+    btn.textContent = action.label;
+    btn.onclick = () => { el.classList.remove('show'); action.run(); };
+  }
+  el.classList.toggle('actionable', Boolean(action));
   el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+export const FONT_SCALES = [1, 1.15, 1.3];
+
+export function applyFontScale(v) {
+  document.documentElement.style.setProperty('--scale', v);
 }
 
 import { today, daysBetween } from './srs.js';

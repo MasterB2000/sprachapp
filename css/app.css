@@ -19,11 +19,14 @@
 
 * { box-sizing: border-box; }
 
+html { font-size: calc(17px * var(--scale, 1)); }
+
 html, body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 17px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.45;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -106,18 +109,18 @@ button:disabled { opacity: 0.4; cursor: default; }
   background: var(--surface);
   border-radius: var(--radius);
   padding: 20px 16px;
-  min-height: 240px;
+  min-height: 160px;
 }
 .card .icon-btn { position: absolute; top: 8px; right: 8px; }
 
 .de-sentence { font-size: 1.3rem; margin: 0 32px 16px 0; }
 
-.answer { min-height: 72px; }
-.answer.veiled .decode { visibility: hidden; }
+.answer { margin-top: 4px; }
+.answer.no-literal .de { display: none; }
+.literal { color: var(--sand); margin: 0 0 8px; letter-spacing: 0.01em; }
 
 .decode { display: flex; flex-wrap: wrap; gap: 6px 12px; }
-.decode .w { display: grid; transition: opacity 0.5s; }
-.decode .w.gone { opacity: 0; }
+.decode .w { display: grid; }
 .decode .en { font-size: 1.35rem; font-weight: 600; }
 .decode .de { font-size: 0.85rem; color: var(--sand); }
 
@@ -130,8 +133,29 @@ button:disabled { opacity: 0.4; cursor: default; }
   font-size: 0.95rem;
 }
 
-.controls { display: grid; gap: 12px; margin-top: 20px; justify-items: center; }
+/* Karte oben, Knöpfe unten in Daumenreichweite */
+.review {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 64px - env(safe-area-inset-bottom) - 40px);
+}
+.controls { display: grid; gap: 10px; margin-top: auto; padding-top: 20px; justify-items: stretch; }
 .controls .row { width: 100%; }
+.help { justify-self: center; min-width: 50%; }
+.hint { text-align: center; margin: 12px 0 0; }
+
+.timeline { height: 3px; background: var(--line); border-radius: 2px; margin-bottom: 12px; overflow: hidden; }
+.timeline span { display: block; height: 100%; width: 0; background: var(--muted); transition: width 1s linear; }
+
+.meter { display: flex; align-items: center; gap: 10px; }
+.meter canvas { flex: 1; height: 48px; width: 100%; }
+
+.links { justify-content: center; }
+.links { gap: 0; flex-wrap: nowrap; }
+.links > .link { flex: 0 1 auto; font-size: 0.9rem; padding: 6px 10px; white-space: nowrap; }
+
+.accent-soft { background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent); font-weight: 600; }
+.play .playing { background: var(--accent); color: var(--on-accent); }
 
 .mic {
   width: 100%;
@@ -153,6 +177,8 @@ button:disabled { opacity: 0.4; cursor: default; }
 .grade button { min-height: 64px; font-weight: 600; }
 .grade-bad { background: transparent; border: 1px solid var(--bad); color: var(--bad); }
 .grade-good { background: var(--good); color: var(--on-accent); }
+.grade-mid { background: transparent; border: 1px solid var(--muted); color: var(--text); }
+.grade button:disabled { opacity: 0.25; }
 
 .done { padding-top: 32px; }
 .finding { font-size: 1.1rem; }
@@ -216,7 +242,7 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: calc(76px + env(safe-area-inset-bottom));
+  top: calc(12px + env(safe-area-inset-top));
   max-width: 528px;
   margin: 0 auto;
   background: var(--surface-2);
@@ -224,11 +250,23 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   border-radius: var(--radius);
   padding: 12px 16px;
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(-8px);
   transition: 0.25s;
   pointer-events: none;
 }
 .toast.show { opacity: 1; transform: none; }
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast span { flex: 1; }
+.toast.actionable { pointer-events: auto; }
+.toast button { background: none; color: var(--accent); font-weight: 600; min-height: 40px; padding: 6px 8px; }
+
+/* ---------- Einstellungen ---------- */
+
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; }
+.setting select { flex: 0 1 auto; }
+.seg { display: flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.seg button { border-radius: 0; background: var(--surface-2); min-width: 52px; }
+.seg button.active { background: var(--accent); color: var(--on-accent); }
 
 select {
   flex: 2 1 0;

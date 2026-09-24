@@ -6,7 +6,7 @@ import { buildRefinePrompt, parseResponse } from './prompt.js';
 import { renderDecode } from './decode.js';
 import * as audio from './audio.js';
 import * as voice from './voice.js';
-import { h, esc, toast, formatDay } from './ui.js';
+import { h, esc, toast, formatDay, FONT_SCALES, applyFontScale } from './ui.js';
 
 const PROMPT_BATCH = 25;
 
@@ -30,6 +30,8 @@ async function render() {
   const fresh = phrases.filter(srs.isNew).length;
   const unrefined = phrases.filter((p) => !p.refined);
   const currentVoice = await voice.getVoice();
+  const literal = await db.getSetting('literal', 'tip');
+  const fontScale = await db.getSetting('fontScale', 1);
 
   root.innerHTML = '';
   root.appendChild(h(`
@@ -48,6 +50,25 @@ async function render() {
           <textarea data-answer rows="4" placeholder="…oder hier lang drücken und Einfügen wählen" hidden></textarea>
           <div data-preview></div>
         ` : '<p class="muted">Alles veredelt.</p>'}
+      </div>
+
+      <div class="panel">
+        <h3>Anzeige</h3>
+        <label class="setting">
+          <span>Wörtliche Übersetzung</span>
+          <select data-literal>
+            <option value="tip" ${literal === 'tip' ? 'selected' : ''}>nur als Tipp</option>
+            <option value="always" ${literal === 'always' ? 'selected' : ''}>immer</option>
+            <option value="off" ${literal === 'off' ? 'selected' : ''}>aus</option>
+          </select>
+        </label>
+        <p class="muted small">Zeigt, was jedes englische Wort wörtlich heißt: „ich · will · zu · backen“. So wird sichtbar, wo Englisch anders gebaut ist als Deutsch.</p>
+        <div class="setting">
+          <span>Schrift</span>
+          <div class="seg" data-font>
+            ${FONT_SCALES.map((f, i) => `<button data-v="${f}" class="${f === fontScale ? 'active' : ''}" style="font-size:${0.85 + i * 0.2}rem">A</button>`).join('')}
+          </div>
+        </div>
       </div>
 
       <div class="panel">
@@ -77,6 +98,7 @@ async function render() {
   `));
 
   bindRefine(unrefined.slice(0, PROMPT_BATCH));
+  bindDisplay();
   bindVoice();
   bindBackup();
   renderList(phrases);
@@ -161,6 +183,7 @@ async function applyRefined() {
       note: it.note,
       source: 'prompt',
       refined: Boolean(it.decode),
+      flagged: false,
       updated: Date.now(),
     });
     await db.put('phrases', p);
@@ -168,6 +191,18 @@ async function applyRefined() {
   toast(`${parsed.length} Wendungen veredelt.`);
   parsed = null;
   await render();
+}
+
+// ---------- Anzeige ----------
+
+function bindDisplay() {
+  root.querySelector('[data-literal]').addEventListener('change', (e) => db.setSetting('literal', e.target.value));
+  root.querySelectorAll('[data-font] button').forEach((b) => b.addEventListener('click', async () => {
+    const v = Number(b.dataset.v);
+    applyFontScale(v);
+    await db.setSetting('fontScale', v);
+    root.querySelectorAll('[data-font] button').forEach((x) => x.classList.toggle('active', x === b));
+  }));
 }
 
 // ---------- Stimme ----------

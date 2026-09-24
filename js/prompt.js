@@ -6,6 +6,7 @@ export function buildRefinePrompt(phrases) {
     id: p.id,
     de: p.de,
     ...(p.en ? { entwurf: p.en } : {}),
+    ...(p.flagged ? { hinweis: 'Der Lernende findet diese Fassung komisch oder unnatürlich – bitte kritisch prüfen.' } : {}),
   }));
 
   return `Du hilfst einem deutschen Muttersprachler beim Englischlernen (Niveau: B1 Sprechen, B2 Verstehen). Ziel ist natürliches Alltagsenglisch im Gespräch, kein Fachenglisch.

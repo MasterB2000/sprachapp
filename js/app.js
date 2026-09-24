@@ -7,6 +7,7 @@ import * as library from './library.js';
 import { registerSource } from './translate.js';
 import { bergamotSource, warmUp } from './bergamot.js';
 import * as voice from './voice.js';
+import { applyFontScale } from './ui.js';
 
 registerSource(bergamotSource);
 
@@ -30,6 +31,7 @@ async function init() {
     navigator.serviceWorker.register('sw.js').catch((err) => console.warn('Service Worker:', err));
   }
   db.requestPersistence();
+  applyFontScale(await db.getSetting('fontScale', 1));
   try {
     await db.seedStartLesson();
   } catch (err) {

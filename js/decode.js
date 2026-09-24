@@ -1,11 +1,12 @@
 // Dekodier-Anzeige: englische Wörter, darunter wörtlich auf Deutsch (Birkenbihl).
-// Blendet Wort für Wort im Takt der Musterstimme aus.
 
 // Ohne Dekodierung (z. B. frisch übersetzt) werden nur die englischen Wörter gezeigt.
 function pairs(phrase) {
-  if (Array.isArray(phrase.decode) && phrase.decode.length) return phrase.decode;
+  if (hasDecode(phrase)) return phrase.decode;
   return phrase.en.split(/\s+/).filter(Boolean).map((w) => [w, '']);
 }
+
+export const hasDecode = (phrase) => Array.isArray(phrase.decode) && phrase.decode.length > 0;
 
 export function renderDecode(container, phrase) {
   container.innerHTML = '';
@@ -23,24 +24,8 @@ export function renderDecode(container, phrase) {
   return line;
 }
 
-let timers = [];
-
-export function cancelFade() {
-  timers.forEach(clearTimeout);
-  timers = [];
-}
-
-// Jedes Wort bleibt `visibleMs` sichtbar, nachdem die Stimme es (geschätzt) erreicht hat.
-export function fadeAlong(line, { rate = 1, visibleMs = 1500 } = {}) {
-  cancelFade();
-  const words = [...line.querySelectorAll('.w')];
-  const perWord = 380 / rate;
-  words.forEach((w, i) => {
-    timers.push(setTimeout(() => w.classList.add('gone'), i * perWord + visibleMs));
-  });
-}
-
-export function showAll(line) {
-  cancelFade();
-  line.querySelectorAll('.w').forEach((w) => w.classList.remove('gone'));
+// Nur die wörtliche deutsche Zeile, als Tipp vor der Lösung: „ich · will · zu · backen …“
+export function literalLine(phrase) {
+  if (!hasDecode(phrase)) return '';
+  return phrase.decode.map(([, de]) => de).filter(Boolean).join(' · ');
 }

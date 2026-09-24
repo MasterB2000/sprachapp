@@ -69,6 +69,9 @@ export function stopSpeaking() {
 let recorder = null;
 let chunks = [];
 let stream = null;
+let meterCtx = null;
+let analyser = null;
+let samples = null;
 
 export const canRecord = () => Boolean(navigator.mediaDevices && window.MediaRecorder);
 
@@ -78,6 +81,15 @@ export async function startRecording() {
     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
   });
   chunks = [];
+  try {
+    meterCtx = new AudioContext();
+    analyser = meterCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    samples = new Float32Array(analyser.fftSize);
+    meterCtx.createMediaStreamSource(stream).connect(analyser);
+  } catch {
+    analyser = null; // ohne Pegel geht die Aufnahme trotzdem
+  }
   recorder = new MediaRecorder(stream);
   recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
   recorder.start();
@@ -89,6 +101,8 @@ export function stopRecording() {
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
       stream.getTracks().forEach((t) => t.stop());
+      meterCtx?.close();
+      meterCtx = analyser = null;
       recorder = null;
       stream = null;
       resolve(blob);
@@ -98,6 +112,15 @@ export function stopRecording() {
 }
 
 export const isRecording = () => Boolean(recorder && recorder.state === 'recording');
+
+// Momentane Lautstärke der Aufnahme, 0 … 1 – für den Pegelbalken.
+export function level() {
+  if (!analyser) return 0;
+  analyser.getFloatTimeDomainData(samples);
+  let sum = 0;
+  for (const v of samples) sum += v * v;
+  return Math.min(1, Math.sqrt(Math.sqrt(sum / samples.length)) * 1.6);
+}
 
 // ---------- Wiedergabe ----------
 

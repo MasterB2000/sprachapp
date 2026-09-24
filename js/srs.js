@@ -1,7 +1,10 @@
 // Wiederholungsabstände.
-// Saß → Abstand wächst (1 → 3 → 8 → 20 → 50 Tage …). Saß nicht → morgen wieder.
+//   Sitzt      → Abstand wächst deutlich (1 → 3 → 8 → 20 → 50 Tage …)
+//   Wackelig   → Abstand wächst nur wenig
+//   Noch nicht → morgen wieder
 
 const FACTOR = 2.5;
+const HARD_FACTOR = 1.2;
 
 export function today() {
   return new Date().toLocaleDateString('sv'); // JJJJ-MM-TT in Ortszeit
@@ -23,10 +26,13 @@ export const isReady = (p) => Boolean(p.en);
 export const isNew = (p) => isReady(p) && p.reps === 0;
 export const isDue = (p, day = today()) => isReady(p) && p.reps > 0 && p.due <= day;
 
-export function grade(p, ok, day = today()) {
-  if (ok) {
+// rating: 'good' (Sitzt) | 'hard' (Wackelig) | 'again' (Noch nicht)
+export function grade(p, rating, day = today()) {
+  if (rating === 'good') {
     p.interval = p.interval ? Math.max(p.interval + 1, Math.round(p.interval * FACTOR)) : 1;
     p.streak += 1;
+  } else if (rating === 'hard') {
+    p.interval = p.interval ? Math.max(p.interval + 1, Math.round(p.interval * HARD_FACTOR)) : 1;
   } else {
     p.interval = 1;
     p.streak = 0;
@@ -38,16 +44,6 @@ export function grade(p, ok, day = today()) {
   p.due = addDays(day, p.interval);
   p.updated = Date.now();
   return p;
-}
-
-// Wie viel Text beim Aufdecken zu sehen ist:
-//   0 = Text sichtbar, blendet mit der Stimme aus
-//   1 = Text auf Antippen
-//   2 = ohne Text (erst nach der Bewertung)
-// Ab Schieberstufe 4 eine Stufe strenger.
-export function textStage(p, level) {
-  const base = p.streak >= 6 ? 2 : p.streak >= 3 ? 1 : 0;
-  return Math.min(2, base + (level >= 4 ? 1 : 0));
 }
 
 // Stellt die Tagesrunde zusammen: erst Fälliges, dann eine begrenzte Zahl neuer Wendungen.
