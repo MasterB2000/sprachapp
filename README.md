@@ -2,8 +2,8 @@
 
 Offline-Sprachlern-App als Web-App (PWA), Deutsch → Englisch.
 
-- **Erfassen:** deutschen Satz diktieren, englische Fassung sofort – übersetzt direkt im Gerät, ohne Netz.
-- **Wiederholen:** jede Wendung kommt in wachsenden Abständen zurück. Selbst sprechen, Muster hören, eigene Aufnahme direkt danach.
+- **Übersetzen:** Deutsch ⇄ Englisch diktieren, Übersetzung sofort – direkt im Gerät, ohne Netz. Jeder Satz wird zur Übungskarte (gehörte Sätze zur Hör-Karte).
+- **Üben:** jede Wendung kommt in wachsenden Abständen zurück. Selbst sprechen, Muster hören, eigene Aufnahme vergleichen.
 - **Veredeln:** die App erzeugt einen Prompt für eine KI nach Wahl; die Antwort liefert natürliche Fassungen mit wörtlicher Übersetzung (Birkenbihl).
 
 Alle Lerndaten bleiben auf dem Gerät. Kein Konto, keine Werbung, kein Abo.
