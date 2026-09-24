@@ -7,6 +7,7 @@
 // Antippen klappt die Aktionen auf: Kopieren, Teilen, Anhören, Zeigen, Bearbeiten, Anpinnen, Lernen, Löschen.
 
 import * as db from './db.js';
+import * as srs from './srs.js';
 import * as audio from './audio.js';
 import { translate } from './translate.js';
 import { renderDecode } from './decode.js';
@@ -149,14 +150,16 @@ async function capture(text) {
     else renderDecode(outEl, phrase);
     status.textContent = dir === 'en-de'
       ? 'Gespeichert – kommt beim Üben als Hör-Karte dran.'
-      : 'Gespeichert – kommt beim Üben als Karte dran.';
+      : srs.waitsForCheck(phrase)
+        ? 'Gespeichert. Geübt wird der Satz, sobald er geprüft ist (Reiter „Sätze“ → KI-Prüfung) – so lernst du kein Maschinen-Englisch.'
+        : 'Gespeichert – kommt beim Üben als Karte dran.';
     root.querySelector('[data-copy-new]').onclick = () => copy(out);
     root.querySelector('[data-say]').onclick = () => audio.speak(phrase.en, { rate: 0.95 });
     root.querySelector('[data-show-new]').onclick = () => showBig(phrase);
     audio.speak(phrase.en, { rate: 0.95 });
   } else {
     outEl.innerHTML = '';
-    status.textContent = 'Gemerkt. Die Übersetzung kommt beim Veredeln (Reiter „Sätze“).';
+    status.textContent = 'Gemerkt. Die Übersetzung kommt bei der KI-Prüfung (Reiter „Sätze“).';
   }
 
   root.querySelector('[data-de]').value = '';
@@ -190,7 +193,7 @@ function fillList(ul, phrases, pinnedList) {
           ${pinnedList ? '<span class="grip" title="Zum Verschieben festhalten" aria-label="Verschieben">⠿</span>' : ''}
           <button class="texts">
             <span class="de">${esc(inputOf(p))}</span>
-            <span class="en">${outputOf(p) ? esc(outputOf(p)) : '<i class="muted">wartet aufs Veredeln</i>'}</span>
+            <span class="en">${outputOf(p) ? esc(outputOf(p)) : '<i class="muted">wartet auf die KI-Prüfung</i>'}</span>
             ${tags(p)}
           </button>
         </div>
@@ -264,7 +267,7 @@ async function copy(text) {
 // ---------- Bearbeiten ----------
 // Eigene Ansicht mit nur einem Feld, Speichern oben (die Tastatur verdeckt es so nie).
 // Ausgangssatz geändert → neu übersetzen. Übersetzung geändert → gilt als von dir korrigiert
-// und wird beim Veredeln nicht mehr überschrieben (nur die wörtliche Zeile kommt dazu).
+// und wird bei der KI-Prüfung nicht mehr überschrieben (nur die wörtliche Zeile kommt dazu).
 
 const isInput = (p, lang) => lang === (p.dir === 'en-de' ? 'en' : 'de');
 

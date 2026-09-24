@@ -21,8 +21,16 @@ export function daysBetween(a, b) {
   return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
 }
 
-// Geübt wird, was beide Sprachen hat und nicht auf "nur übersetzen" steht.
-export const isReady = (p) => Boolean(p.en && p.de) && p.learn !== false;
+// Maschinen-Übersetzungen werden erst geübt, wenn sie geprüft sind (KI-Prüfung oder eigene
+// Korrektur) – sonst lernt man womöglich falsches Englisch. Hör-Karten sind ausgenommen:
+// deren Englisch ist echt, gehört von einem Muttersprachler. Abschaltbar in den Optionen.
+let allowUnchecked = false;
+export const setAllowUnchecked = (v) => { allowUnchecked = Boolean(v); };
+export const isChecked = (p) => p.dir === 'en-de' || Boolean(p.refined) || Boolean(p.human);
+export const waitsForCheck = (p) => !allowUnchecked && p.learn !== false && Boolean(p.en && p.de) && !isChecked(p);
+
+// Geübt wird, was beide Sprachen hat, nicht auf "nur übersetzen" steht und geprüft ist.
+export const isReady = (p) => Boolean(p.en && p.de) && p.learn !== false && (allowUnchecked || isChecked(p));
 export const isNew = (p) => isReady(p) && p.reps === 0;
 export const isDue = (p, day = today()) => isReady(p) && p.reps > 0 && p.due <= day;
 
@@ -39,6 +47,7 @@ export function grade(p, rating, day = today()) {
     p.lapses += 1;
   }
   p.reps += 1;
+  p.lastRating = rating;
   if (!p.firstSeen) p.firstSeen = day;
   p.lastReviewed = day;
   p.due = addDays(day, p.interval);

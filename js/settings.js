@@ -1,6 +1,7 @@
-// Einstellungen: Anzeige und Stimmen.
+// Optionen: Üben, Anzeige und Stimmen.
 
 import * as db from './db.js';
+import * as srs from './srs.js';
 import * as audio from './audio.js';
 import * as voice from './voice.js';
 import { h, esc, toast, FONT_SCALES, applyFontScale } from './ui.js';
@@ -22,10 +23,28 @@ async function render() {
   const googleKeySet = Boolean(await voice.googleKey());
   const literal = await db.getSetting('literal', 'tip');
   const fontScale = await db.getSetting('fontScale', 1);
+  const minutes = await db.getSetting('sessionMinutes', 10);
+  const allowUnchecked = await db.getSetting('allowUnchecked', false);
 
   root.innerHTML = '';
   root.appendChild(h(`
     <section class="settings">
+      <div class="panel">
+        <h3>Üben</h3>
+        <div class="setting">
+          <span>Dauer einer Runde</span>
+          <div class="seg" data-minutes>
+            ${[5, 10, 15, 20].map((m) => `<button data-v="${m}" class="${m === minutes ? 'active' : ''}">${m}</button>`).join('')}
+          </div>
+        </div>
+        <p class="muted small">Minuten. Danach bietet die App eine weitere Runde an – freiwillig.</p>
+        <label class="setting">
+          <span>Ungeprüfte Übersetzungen schon üben</span>
+          <input type="checkbox" data-unchecked ${allowUnchecked ? 'checked' : ''}>
+        </label>
+        <p class="muted small">Aus (empfohlen): Sätze aus dem Übersetzer werden erst geübt, wenn sie per KI-Prüfung oder von dir korrigiert sind. So lernst du kein Maschinen-Englisch. Hör-Karten sind immer dabei.</p>
+      </div>
+
       <div class="panel">
         <h3>Anzeige</h3>
         <label class="setting">
@@ -77,11 +96,23 @@ async function render() {
     </section>
   `));
 
+  bindPractice();
   bindDisplay();
   bindVoice();
 }
 
-// ---------- Anzeige ----------
+// ---------- Üben und Anzeige ----------
+
+function bindPractice() {
+  root.querySelectorAll('[data-minutes] button').forEach((b) => b.addEventListener('click', async () => {
+    await db.setSetting('sessionMinutes', Number(b.dataset.v));
+    root.querySelectorAll('[data-minutes] button').forEach((x) => x.classList.toggle('active', x === b));
+  }));
+  root.querySelector('[data-unchecked]').addEventListener('change', async (e) => {
+    await db.setSetting('allowUnchecked', e.target.checked);
+    srs.setAllowUnchecked(e.target.checked);
+  });
+}
 
 function bindDisplay() {
   root.querySelector('[data-literal]').addEventListener('change', (e) => db.setSetting('literal', e.target.value));

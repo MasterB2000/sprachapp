@@ -1,6 +1,7 @@
 // Einstieg: Bildschirme umschalten, Startlektion einlesen, Offline-Betrieb anmelden.
 
 import * as db from './db.js';
+import * as srs from './srs.js';
 import * as review from './review.js';
 import * as capture from './capture.js';
 import * as library from './library.js';
@@ -36,6 +37,7 @@ async function init() {
   }
   db.requestPersistence();
   applyFontScale(await db.getSetting('fontScale', 1));
+  srs.setAllowUnchecked(await db.getSetting('allowUnchecked', false));
   try {
     await db.seedStartLesson();
   } catch (err) {

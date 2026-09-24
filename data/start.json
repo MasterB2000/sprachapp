@@ -1,84 +1,84 @@
 {
   "id": "start-deutsche-fallen",
-  "version": 1,
-  "title": "Deutsche Fallen – aus der Niveau-Probe vom 24.09.2026",
+  "version": 2,
+  "title": "Deutsche Fallen – typische Stolpersteine beim Sprechen",
   "items": [
     {
       "id": "s01",
-      "de": "Ich will morgen Brot backen.",
-      "en": "I want to bake bread tomorrow.",
-      "decode": [["I","ich"],["want","will"],["to","zu"],["bake","backen"],["bread","Brot"],["tomorrow.","morgen."]],
-      "note": "Deutsches „wollen“ ist want (to). Englisches will heißt „werden“ und macht Zukunft."
+      "de": "Ich will heute Abend Brot backen.",
+      "en": "I want to bake bread tonight.",
+      "decode": [["I","ich"],["want","will"],["to","zu"],["bake","backen"],["bread","Brot"],["tonight.","heute-Abend."]],
+      "note": "Deutsches „wollen“ ist want (to). Englisches will bedeutet „werden“ und kündigt Zukunft an."
     },
     {
       "id": "s02",
       "de": "Ich rufe dich morgen an.",
       "en": "I'll call you tomorrow.",
-      "decode": [["I'll","ich-werde"],["call","rufen"],["you","dich"],["tomorrow.","morgen."]],
-      "note": "Hier ist will richtig: Es ist eine Zusage für später, kein Wunsch. I'll = I will."
+      "decode": [["I'll","ich-werde"],["call","anrufen"],["you","dich"],["tomorrow.","morgen."]],
+      "note": "Hier passt will (I'll): Es ist eine Zusage für später, kein Wunsch."
     },
     {
       "id": "s03",
-      "de": "Ich denke auf Deutsch.",
-      "en": "I think in German.",
-      "decode": [["I","ich"],["think","denke"],["in","in"],["German.","Deutsch."]],
-      "note": "Sprachen: think in, speak in, write in. Einfache Gegenwart, weil es eine Gewohnheit ist."
+      "de": "Ich denke oft noch auf Deutsch.",
+      "en": "I often still think in German.",
+      "decode": [["I","ich"],["often","oft"],["still","noch"],["think","denke"],["in","in"],["German.","Deutsch."]],
+      "note": "In einer Sprache denken, sprechen, schreiben: immer in – think in German, nicht on."
     },
     {
       "id": "s04",
-      "de": "Wir hatten eine lange Diskussion.",
-      "en": "We had a long discussion.",
-      "decode": [["We","wir"],["had","hatten"],["a","eine"],["long","lange"],["discussion.","Diskussion."]],
-      "note": "discuss ist das Verb, discussion das Nomen. Und Diskussionen sind long, nicht big."
+      "de": "Wir hatten gestern eine lange Diskussion über Politik.",
+      "en": "We had a long discussion about politics yesterday.",
+      "decode": [["We","wir"],["had","hatten"],["a","eine"],["long","lange"],["discussion","Diskussion"],["about","über"],["politics","Politik"],["yesterday.","gestern."]],
+      "note": "discussion ist das Nomen (discuss das Verb), und Diskussionen sind long, nicht big. Mit „gestern“ steht die einfache Vergangenheit: had."
     },
     {
       "id": "s05",
       "de": "Ich muss auf Englisch umschalten.",
       "en": "I have to switch to English.",
-      "decode": [["I","ich"],["have","habe"],["to","zu"],["switch","umschalten"],["to","zu"],["English.","Englisch."]],
-      "note": "Müssen = have to. „I have switch“ fehlt das to."
+      "decode": [["I","ich"],["have","habe"],["to","zu"],["switch","wechseln"],["to","zu"],["English.","Englisch."]],
+      "note": "Müssen = have to. Das to darf nicht fehlen: nicht „I have switch“."
     },
     {
       "id": "s06",
-      "de": "Die sind unterschiedlich.",
-      "en": "They're different.",
-      "decode": [["They're","sie-sind"],["different.","unterschiedlich."]],
-      "note": "they're = they are (sie sind). there are = es gibt. Klingen fast gleich."
+      "de": "Die sind völlig unterschiedlich.",
+      "en": "They're completely different.",
+      "decode": [["They're","sie-sind"],["completely","völlig"],["different.","unterschiedlich."]],
+      "note": "they're = they are (sie sind). Nicht verwechseln mit there are (es gibt) – klingt fast gleich."
     },
     {
       "id": "s07",
       "de": "Es gibt zwei Möglichkeiten.",
       "en": "There are two options.",
-      "decode": [["There","dort"],["are","sind"],["two","zwei"],["options.","Möglichkeiten."]],
-      "note": "Das Gegenstück zu they're: there are = es gibt."
+      "decode": [["There","da"],["are","sind"],["two","zwei"],["options.","Möglichkeiten."]],
+      "note": "„Es gibt“ heißt there is / there are – wörtlich „da sind“. Nicht „it gives“."
     },
     {
       "id": "s08",
       "de": "Ich warte auf den Bus.",
       "en": "I'm waiting for the bus.",
       "decode": [["I'm","ich-bin"],["waiting","wartend"],["for","für"],["the","den"],["bus.","Bus."]],
-      "note": "wait for, nicht wait on. Und gerade jetzt: I'm waiting."
+      "note": "warten auf = wait for. Und weil es gerade passiert: I'm waiting."
     },
     {
       "id": "s09",
       "de": "Das hängt vom Wetter ab.",
       "en": "It depends on the weather.",
-      "decode": [["It","es"],["depends","hängt"],["on","auf"],["the","dem"],["weather.","Wetter."]],
-      "note": "depend on – nicht of, nicht from."
+      "decode": [["It","es"],["depends","hängt-ab"],["on","auf"],["the","dem"],["weather.","Wetter."]],
+      "note": "abhängen von = depend on – nicht of und nicht from."
     },
     {
       "id": "s10",
-      "de": "Es kommt darauf an.",
+      "de": "Kommt drauf an.",
       "en": "It depends.",
       "decode": [["It","es"],["depends.","hängt-ab."]],
-      "note": "Nicht „it comes on it“. Die Kurzform reicht völlig."
+      "note": "Die kurze Antwort auf viele Fragen. Nicht „it comes on it“."
     },
     {
       "id": "s11",
       "de": "Ich freue mich aufs Wochenende.",
       "en": "I'm looking forward to the weekend.",
-      "decode": [["I'm","ich-bin"],["looking","schauend"],["forward","vorwärts"],["to","zu"],["the","dem"],["weekend.","Wochenende."]],
-      "note": "Nach look forward to kommt ein Nomen oder -ing: looking forward to seeing you."
+      "decode": [["I'm","ich-bin"],["looking","schauend"],["forward","nach-vorn"],["to","zu"],["the","dem"],["weekend.","Wochenende."]],
+      "note": "sich freuen auf = look forward to. Danach Nomen oder -ing: looking forward to seeing you."
     },
     {
       "id": "s12",
@@ -91,78 +91,78 @@
       "id": "s13",
       "de": "Ich habe Angst vor Spinnen.",
       "en": "I'm afraid of spiders.",
-      "decode": [["I'm","ich-bin"],["afraid","ängstlich"],["of","von"],["spiders.","Spinnen."]],
-      "note": "Angst haben = be afraid (of). Englisch „ist“ Gefühle, statt sie zu „haben“."
+      "decode": [["I'm","ich-bin"],["afraid","ängstlich"],["of","vor"],["spiders.","Spinnen."]],
+      "note": "Angst haben = be afraid (of). Englisch „ist“ ein Gefühl, statt es zu „haben“."
     },
     {
       "id": "s14",
       "de": "Ich habe Hunger.",
       "en": "I'm hungry.",
       "decode": [["I'm","ich-bin"],["hungry.","hungrig."]],
-      "note": "Wie bei Angst: Hunger, Durst, Recht haben – im Englischen mit be."
+      "note": "Hunger, Durst, Angst, Recht haben – im Englischen alles mit be: I'm hungry, I'm thirsty."
     },
     {
       "id": "s15",
-      "de": "Du hast recht.",
+      "de": "Da hast du recht.",
       "en": "You're right.",
       "decode": [["You're","du-bist"],["right.","richtig."]],
-      "note": "Recht haben = be right."
+      "note": "Recht haben = be right. Nicht „you have right“."
     },
     {
       "id": "s16",
-      "de": "Ich bin gut im Kochen.",
-      "en": "I'm good at cooking.",
-      "decode": [["I'm","ich-bin"],["good","gut"],["at","an"],["cooking.","kochend."]],
-      "note": "good at, nicht good in."
+      "de": "Ich bin gut im Brotbacken.",
+      "en": "I'm good at baking bread.",
+      "decode": [["I'm","ich-bin"],["good","gut"],["at","bei"],["baking","backend"],["bread.","Brot."]],
+      "note": "gut in etwas = good at, danach -ing: good at cooking, good at baking."
     },
     {
       "id": "s17",
-      "de": "Ich stimme dir zu.",
+      "de": "Da stimme ich dir zu.",
       "en": "I agree with you.",
       "decode": [["I","ich"],["agree","stimme-zu"],["with","mit"],["you.","dir."]],
-      "note": "agree with (jemandem). Nicht „I am agree“."
+      "note": "agree with someone. Nicht „I am agree“ – agree ist ein Verb."
     },
     {
       "id": "s18",
-      "de": "Das erinnert mich an meine Kindheit.",
-      "en": "That reminds me of my childhood.",
-      "decode": [["That","das"],["reminds","erinnert"],["me","mich"],["of","von"],["my","meine"],["childhood.","Kindheit."]],
-      "note": "remind someone of something – nicht on."
+      "de": "Der Geruch erinnert mich an meine Kindheit.",
+      "en": "The smell reminds me of my childhood.",
+      "decode": [["The","der"],["smell","Geruch"],["reminds","erinnert"],["me","mich"],["of","an"],["my","meine"],["childhood.","Kindheit."]],
+      "note": "jemanden an etwas erinnern = remind someone of something – nicht on."
     },
     {
       "id": "s19",
       "de": "Ich wohne seit zehn Jahren hier.",
       "en": "I've lived here for ten years.",
       "decode": [["I've","ich-habe"],["lived","gewohnt"],["here","hier"],["for","für"],["ten","zehn"],["years.","Jahre."]],
-      "note": "Seit + Zeitraum = for, und die Zeitform ist Present Perfect, nicht „I live here since“."
+      "note": "Etwas, das bis heute andauert: have + Partizip, und „seit + Zeitraum“ = for. Nicht „I live here since ten years“."
     },
     {
       "id": "s20",
       "de": "Ich habe ihn gestern gesehen.",
       "en": "I saw him yesterday.",
       "decode": [["I","ich"],["saw","sah"],["him","ihn"],["yesterday.","gestern."]],
-      "note": "Mit gestern, letzte Woche, 2019: einfache Vergangenheit. Nicht „I have seen him yesterday“."
+      "note": "Mit gestern, letzte Woche, 2019 steht die einfache Vergangenheit: I saw – nicht „I have seen him yesterday“."
     },
     {
       "id": "s21",
       "de": "Ich habe einen Fehler gemacht.",
       "en": "I made a mistake.",
       "decode": [["I","ich"],["made","machte"],["a","einen"],["mistake.","Fehler."]],
-      "note": "make a mistake. Fehler wird gemacht (make), nicht getan (do)."
+      "note": "Fehler macht man: make a mistake (nicht do)."
     },
     {
       "id": "s22",
       "de": "Ich muss eine Entscheidung treffen.",
       "en": "I have to make a decision.",
       "decode": [["I","ich"],["have","habe"],["to","zu"],["make","machen"],["a","eine"],["decision.","Entscheidung."]],
-      "note": "Entscheidungen werden gemacht, nicht getroffen: make a decision."
+      "note": "Entscheidungen werden im Englischen „gemacht“: make a decision."
     },
     {
       "id": "s23",
       "de": "Lass uns eine Pause machen.",
       "en": "Let's take a break.",
       "decode": [["Let's","lass-uns"],["take","nehmen"],["a","eine"],["break.","Pause."]],
-      "note": "Pausen werden genommen: take a break."
+      "note": "Pausen werden „genommen“: take a break."
     },
     {
       "id": "s24",
@@ -176,42 +176,112 @@
       "de": "Ich bekomme morgen ein Paket.",
       "en": "I'm getting a parcel tomorrow.",
       "decode": [["I'm","ich-bin"],["getting","bekommend"],["a","ein"],["parcel","Paket"],["tomorrow.","morgen."]],
-      "note": "bekommen = get. become heißt „werden“."
+      "note": "bekommen = get. Englisches become heißt „werden“ – falscher Freund."
     },
     {
       "id": "s26",
       "de": "Ich kümmere mich darum.",
       "en": "I'll take care of it.",
-      "decode": [["I'll","ich-werde"],["take","nehmen"],["care","Sorge"],["of","von"],["it.","es."]],
-      "note": "take care of something. Zusage für gleich, daher I'll."
+      "decode": [["I'll","ich-werde"],["take","nehmen"],["care","Sorge"],["of","um"],["it.","es."]],
+      "note": "sich um etwas kümmern = take care of something."
     },
     {
       "id": "s27",
       "de": "Wie sagt man das auf Englisch?",
       "en": "How do you say that in English?",
-      "decode": [["How","wie"],["do","tust"],["you","du"],["say","sagen"],["that","das"],["in","in"],["English?","Englisch?"]],
-      "note": "Das allgemeine „man“ ist im Englischen oft you."
+      "decode": [["How","wie"],["do","tust"],["you","du"],["say","sagen"],["that","das"],["in","auf"],["English?","Englisch?"]],
+      "note": "Das allgemeine „man“ ist im Englischen meist you. Und „auf Englisch“ = in English."
     },
     {
       "id": "s28",
-      "de": "Also komme ich morgen.",
-      "en": "So I'll come tomorrow.",
-      "decode": [["So","so"],["I'll","ich-werde"],["come","kommen"],["tomorrow.","morgen."]],
-      "note": "Deutsches „also“ ist so. Englisches also heißt „auch“."
+      "de": "Also, was machen wir heute?",
+      "en": "So, what are we doing today?",
+      "decode": [["So,","also,"],["what","was"],["are","sind"],["we","wir"],["doing","machend"],["today?","heute?"]],
+      "note": "Deutsches „also“ ist so. Englisches also heißt „auch“ – falscher Freund."
     },
     {
       "id": "s29",
       "de": "Sie hat sich erkältet.",
       "en": "She's caught a cold.",
-      "decode": [["She's","sie-hat"],["caught","gefangen"],["a","eine"],["cold.","Kälte."]],
-      "note": "Erkältungen fängt man sich: catch a cold."
+      "decode": [["She's","sie-hat"],["caught","gefangen"],["a","eine"],["cold.","Erkältung."]],
+      "note": "Eine Erkältung „fängt“ man sich: catch a cold. She's heißt hier she has."
     },
     {
       "id": "s30",
-      "de": "Mein Handy ist leer.",
-      "en": "My phone is dead.",
-      "decode": [["My","mein"],["phone","Telefon"],["is","ist"],["dead.","tot."]],
-      "note": "Handy ist kein englisches Wort für Telefon. Und leere Akkus sind dead."
+      "de": "Mein Handy-Akku ist leer.",
+      "en": "My phone's dead.",
+      "decode": [["My","mein"],["phone's","Telefon-ist"],["dead.","tot."]],
+      "note": "Handy ist kein englisches Wort – es heißt phone. Ein leerer Akku ist dead (oder: my battery's flat)."
+    },
+    {
+      "id": "s31",
+      "de": "Der Teig muss eine Stunde gehen.",
+      "en": "The dough needs to rise for an hour.",
+      "decode": [["The","der"],["dough","Teig"],["needs","braucht"],["to","zu"],["rise","aufgehen"],["for","für"],["an","eine"],["hour.","Stunde."]],
+      "note": "Teig „geht“ nicht, er steigt: rise. Und „muss“ heißt hier needs to – es ist nötig, nicht Pflicht."
+    },
+    {
+      "id": "s32",
+      "de": "Ich habe Kopfschmerzen.",
+      "en": "I've got a headache.",
+      "decode": [["I've","ich-habe"],["got","bekommen"],["a","einen"],["headache.","Kopfschmerz."]],
+      "note": "Englisch zählt Schmerzen: a headache (Einzahl mit a). I've got ist im Alltag üblicher als I have."
+    },
+    {
+      "id": "s33",
+      "de": "Mir ist kalt.",
+      "en": "I'm cold.",
+      "decode": [["I'm","ich-bin"],["cold.","kalt."]],
+      "note": "„Mir ist …“ wird zu I'm …: I'm cold, I'm warm. Nicht „it is cold to me“."
+    },
+    {
+      "id": "s34",
+      "de": "Das schmeckt nach Zimt.",
+      "en": "It tastes like cinnamon.",
+      "decode": [["It","es"],["tastes","schmeckt"],["like","wie"],["cinnamon.","Zimt."]],
+      "note": "schmecken nach = taste like (oder taste of) – nicht „taste after“."
+    },
+    {
+      "id": "s35",
+      "de": "Ich freue mich für dich.",
+      "en": "I'm happy for you.",
+      "decode": [["I'm","ich-bin"],["happy","glücklich"],["for","für"],["you.","dich."]],
+      "note": "Sich für jemanden freuen = be happy for. Das ist nicht look forward to (sich auf etwas freuen)."
+    },
+    {
+      "id": "s36",
+      "de": "Wie lange dauert das?",
+      "en": "How long does it take?",
+      "decode": [["How","wie"],["long","lange"],["does","tut"],["it","es"],["take?","nehmen?"]],
+      "note": "Zeit „dauert“ im Englischen nicht, sie wird „genommen“: it takes an hour."
+    },
+    {
+      "id": "s37",
+      "de": "Ich habe es eilig.",
+      "en": "I'm in a hurry.",
+      "decode": [["I'm","ich-bin"],["in","in"],["a","einer"],["hurry.","Eile."]],
+      "note": "Wieder be statt haben: I'm in a hurry."
+    },
+    {
+      "id": "s38",
+      "de": "Das macht mir nichts aus.",
+      "en": "I don't mind.",
+      "decode": [["I","ich"],["don't","tue-nicht"],["mind.","stören."]],
+      "note": "Freundlich: I don't mind. Vorsicht mit I don't care – das klingt oft nach „ist mir doch egal“."
+    },
+    {
+      "id": "s39",
+      "de": "Ich bin es gewohnt, früh aufzustehen.",
+      "en": "I'm used to getting up early.",
+      "decode": [["I'm","ich-bin"],["used","gewöhnt"],["to","an"],["getting","kommend"],["up","hoch"],["early.","früh."]],
+      "note": "gewohnt sein = be used to + -ing. Nicht verwechseln mit I used to (früher habe ich …)."
+    },
+    {
+      "id": "s40",
+      "de": "Letzte Woche war ich beim Arzt.",
+      "en": "I went to the doctor last week.",
+      "decode": [["I","ich"],["went","ging"],["to","zu"],["the","dem"],["doctor","Arzt"],["last","letzte"],["week.","Woche."]],
+      "note": "„Beim Arzt sein“ heißt meist go to the doctor. Mit last week: einfache Vergangenheit."
     }
   ]
 }

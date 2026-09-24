@@ -1,39 +1,54 @@
-// Prompt-Austausch: Die App erzeugt einen Prompt, der Nutzer kopiert ihn in eine KI
-// seiner Wahl und die Antwort zurück. Streng im geforderten Format, großzügig beim Einlesen.
+// KI-Prüfung per Prompt: Die App erzeugt einen Prompt, der Nutzer kopiert ihn in eine KI seiner
+// Wahl und die Antwort zurück. Streng im geforderten Format, großzügig beim Einlesen.
+// Geprüft werden neue Maschinen-Übersetzungen genauso wie schon vorhandene Karten.
 
-export function buildRefinePrompt(phrases) {
-  const list = phrases.map((p) => (p.dir === 'en-de' ? {
-    id: p.id,
-    en_gehoert: p.en,
-    ...(p.human ? { de_fest: p.de } : p.de ? { de_entwurf: p.de } : {}),
-  } : {
-    id: p.id,
-    de: p.de,
-    ...(p.human ? { en_fest: p.en } : p.en ? { entwurf: p.en } : {}),
-    ...(p.flagged ? { hinweis: 'Der Lernende findet diese Fassung komisch oder unnatürlich – bitte kritisch prüfen.' } : {}),
-  }));
+const FLAG_HINT = 'Der Lernende findet diese Karte komisch oder unnatürlich – bitte besonders kritisch prüfen.';
 
-  return `Du hilfst einem deutschen Muttersprachler beim Englischlernen (Niveau: B1 Sprechen, B2 Verstehen). Ziel ist natürliches Alltagsenglisch im Gespräch, kein Fachenglisch.
+function entry(p) {
+  const e = { id: p.id };
+  if (p.dir === 'en-de') {
+    e.en_gehoert = p.en;
+    if (p.human) e.de_fest = p.de;
+    else if (p.de) e.de_bisher = p.de;
+  } else {
+    e.de = p.de;
+    if (p.human) e.en_fest = p.en;
+    else if (p.en) e[p.refined ? 'en_bisher' : 'entwurf'] = p.en;
+  }
+  if (p.refined && p.decode) e.decode_bisher = p.decode;
+  if (p.refined && p.note) e.note_bisher = p.note;
+  if (p.flagged) e.hinweis = FLAG_HINT;
+  return e;
+}
 
-Unten stehen deutsche Sätze aus seinem Alltag, teils mit einem maschinellen englischen Entwurf. Liefere für jeden Satz:
+export function buildCheckPrompt(phrases) {
+  const list = phrases.map(entry);
 
-1. "en": die natürlichste englische Fassung, wie ein Muttersprachler es im Gespräch sagen würde. Kurzformen (I'm, don't) sind erwünscht.
-2. "decode": eine wörtliche Rückübersetzung nach der Birkenbihl-Methode. Für JEDES englische Wort (Kurzformen als ein Wort) ein Paar [englisches Wort, wörtliche deutsche Bedeutung]. Wörtlich, nicht sinngemäß: "I'm looking forward to it" wird zu [["I'm","ich-bin"],["looking","schauend"],["forward","vorwärts"],["to","zu"],["it","es"]]. Satzzeichen bleiben am englischen Wort.
-3. "note": nur falls es eine typische Falle für Deutsche gibt (falscher Freund, andere Präposition, anderes Verb), ein kurzer Satz dazu. Sonst leerer Text.
+  return `Du hilfst einem deutschen Muttersprachler beim Englischlernen (Niveau: B1 Sprechen, B2 Verstehen). Ziel ist natürliches Alltagsenglisch im Gespräch, kein Fachenglisch. Er lernt jede Karte auswendig – Fehler würde er mitlernen. Prüfe darum genau.
 
-Ist ein Satz mehrdeutig, nimm die im Alltag wahrscheinlichste Bedeutung. Ist ein deutscher Satz offensichtlich falsch erkannt (Spracheingabe), korrigiere ihn in "de".
+Unten stehen Lernkarten aus seinem Alltag. Liefere für JEDEN Eintrag:
 
-ANTWORTE AUSSCHLIESSLICH mit einem JSON-Array in genau dieser Form, ohne Einleitung und ohne Nachwort:
+1. "de": der deutsche Satz (nur offensichtliche Erkennungsfehler der Spracheingabe korrigieren).
+2. "en": die natürlichste englische Fassung, wie ein Muttersprachler es im Gespräch sagen würde. Kurzformen (I'm, don't) sind erwünscht.
+3. "decode": eine wörtliche Rückübersetzung nach der Birkenbihl-Methode. Für JEDES englische Wort (Kurzformen als ein Wort) ein Paar [englisches Wort, wörtliche deutsche Bedeutung]. Wörtlich, nicht sinngemäß: "I'm looking forward to it" wird zu [["I'm","ich-bin"],["looking","schauend"],["forward","nach-vorn"],["to","zu"],["it","es"]]. Satzzeichen bleiben am englischen Wort.
+4. "note": nur falls es eine typische Falle für Deutsche gibt (falscher Freund, andere Präposition, anderes Verb, andere Zeitform), ein kurzer, klarer Satz auf Deutsch. Sonst leerer Text.
+
+Bedeutung der Felder in der Liste:
+- "entwurf": maschinelle Übersetzung – oft holprig, bitte verbessern.
+- "en_bisher", "decode_bisher", "note_bisher", "de_bisher": die bisherige Fassung. Ist sie natürlich und korrekt, gib sie UNVERÄNDERT zurück. Nur ändern, wenn es wirklich besser wird.
+- "en_fest" / "de_fest": von einem Menschen korrigiert – unverändert übernehmen, nur "decode" und "note" liefern.
+- "en_gehoert": ein englischer Satz, den der Lernende im Gespräch gehört hat (per Spracheingabe erfasst, evtl. mit Erkennungsfehlern). In "en" den Satz liefern (nur offensichtliche Erkennungsfehler korrigieren), in "de" die natürliche deutsche Bedeutung.
+- "hinweis": Anmerkung des Lernenden.
+
+Ist ein Satz mehrdeutig, nimm die im Alltag wahrscheinlichste Bedeutung.
+
+ANTWORTE AUSSCHLIESSLICH mit einem JSON-Array in genau dieser Form, ohne Einleitung und ohne Nachwort. Die "id" jedes Eintrags unverändert übernehmen:
 
 [
   {"id": "…", "de": "…", "en": "…", "decode": [["…","…"]], "note": "…"}
 ]
 
-Die "id" jedes Eintrags unverändert übernehmen.
-Hat ein Eintrag "en_fest", wurde die englische Fassung von einem Menschen korrigiert: übernimm sie unverändert als "en" (auch "de" nicht ändern) und liefere nur "decode" und "note".
-Hat ein Eintrag "en_gehoert", hat der Lernende diesen englischen Satz im Gespräch gehört (per Spracheingabe erfasst, evtl. mit Erkennungsfehlern). Liefere dann in "en" den englischen Satz (nur offensichtliche Erkennungsfehler korrigieren), in "de" eine natürliche deutsche Bedeutung (bei "de_fest" diese unverändert übernehmen), dazu "decode" und "note".
-
-Sätze:
+Karten:
 ${JSON.stringify(list, null, 2)}
 `;
 }

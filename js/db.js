@@ -87,23 +87,29 @@ export function makePhrase(fields) {
   };
 }
 
-// Startlektion beim ersten Start einlesen; bei neuer Fassung fehlende Einträge ergänzen.
+// Startlektion beim ersten Start einlesen. Bei neuer Fassung: fehlende Karten ergänzen,
+// vorhandene mit neuem Text versehen – der Lernstand bleibt, eigene Korrekturen (human) auch.
 export async function seedStartLesson() {
   const res = await fetch('data/start.json');
   const lesson = await res.json();
   const done = await getSetting('seeded', {});
   if (done[lesson.id] === lesson.version) return 0;
 
-  const existing = new Set((await getAll('phrases')).map((p) => p.id));
-  let added = 0;
+  const existing = new Map((await getAll('phrases')).map((p) => [p.id, p]));
+  let changed = 0;
   for (const item of lesson.items) {
-    if (existing.has(item.id)) continue;
-    await put('phrases', makePhrase({ ...item, source: 'start', refined: true }));
-    added++;
+    const old = existing.get(item.id);
+    if (!old) {
+      await put('phrases', makePhrase({ ...item, source: 'start', refined: true }));
+      changed++;
+    } else if (!old.human) {
+      await put('phrases', { ...old, ...item, source: 'start', refined: true, flagged: false, updated: Date.now() });
+      changed++;
+    }
   }
   done[lesson.id] = lesson.version;
   await setSetting('seeded', done);
-  return added;
+  return changed;
 }
 
 // Löscht eine Wendung samt Aufnahme. Gibt zurück, was zum Rückgängigmachen nötig ist.

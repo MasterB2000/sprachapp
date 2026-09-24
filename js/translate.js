@@ -6,7 +6,7 @@
 // Richtung: from/to als Sprachkürzel ('de', 'en'). Standard ist Deutsch → Englisch.
 //
 // Geplante Quellen: 'bergamot' (Handy, offline), 'pc' (Ollama, ab Schicht X).
-// Der Prompt-Austausch (prompt.js) veredelt nachträglich und läuft nicht über diese Liste.
+// Die KI-Prüfung per Prompt (prompt.js) verbessert nachträglich und läuft nicht über diese Liste.
 
 const sources = [];
 

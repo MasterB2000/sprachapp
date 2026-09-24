@@ -369,3 +369,27 @@ code { font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border
 .out-de { font-size: 1.35rem; font-weight: 600; margin: 0; }
 .literal.en-read { color: var(--text); font-size: 1.25rem; font-weight: 600; }
 .listen-again { min-height: 64px; font-size: 1.05rem; }
+
+/* Übersicht beim Üben */
+.home h3 { margin-top: 28px; }
+.free-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.free-grid button { display: flex; justify-content: space-between; align-items: center; gap: 6px; text-align: left; }
+.bar-left { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.bar-left .link { min-height: 36px; padding: 4px 6px 4px 0; }
+.setting input[type="checkbox"] { width: 24px; height: 24px; flex: none; accent-color: var(--accent); }
+
+/* KI-Prüfung */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip { min-height: 38px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 0.9rem; }
+.chip span { color: var(--muted); margin-left: 4px; }
+.chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.pick-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 4px; max-height: 320px; overflow-y: auto; }
+.pick-list label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 4px; cursor: pointer; }
+.pick-list input { width: 22px; height: 22px; flex: none; accent-color: var(--accent); margin-top: 2px; }
+.pick-text { display: grid; gap: 2px; min-width: 0; }
+.preview-list .take { float: right; font-size: 0.85rem; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.preview-list .take input { accent-color: var(--accent); width: 20px; height: 20px; }
+.preview-list li.changed { border-left: 3px solid var(--accent); padding-left: 10px; }
+.old { color: var(--muted); margin: 0 0 4px; }
+h4 { margin: 16px 0 4px; font-size: 0.95rem; }
+.search { width: 100%; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; min-height: 48px; margin-bottom: 8px; }

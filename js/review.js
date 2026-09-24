@@ -17,7 +17,6 @@ import * as voice from './voice.js';
 import { renderDecode, literalLine } from './decode.js';
 import { h, esc, toast, formatDay } from './ui.js';
 
-const SESSION_MS = 10 * 60 * 1000;
 const NEW_PER_DAY = 8;
 const MAX_RECORD_MS = 30000;
 
@@ -45,9 +44,10 @@ export async function enter(el, opts = {}) {
     literal: await db.getSetting('literal', 'tip'), // tip | always | off
     playToken: 0,
     playing: null,
-    mode: 'plan', // plan = nach Wiederholungsplan | pinned = nur angepinnte, ändert den Plan nicht
+    mode: 'plan', // plan = nach Wiederholungsplan | free = freies Üben, ändert den Plan nicht
+    sessionMs: (await db.getSetting('sessionMinutes', 10)) * 60000,
   };
-  if (opts.mode === 'pinned') await startPinned();
+  if (opts.mode === 'pinned') await startFree('pinned');
   else await startRound(false);
 }
 
@@ -70,11 +70,32 @@ async function startRound(extra) {
   return beginRound(queue, 'plan', phrases);
 }
 
-// Nur die angepinnten Sätze in deiner Reihenfolge. Freies Üben: Bewertungen ändern den Plan nicht.
-async function startPinned() {
+// ---------- Freies Üben ----------
+// Zusätzlich zum Plan: Bewertungen ändern die Wiederholungsabstände nicht.
+
+const FREE = {
+  pinned: { label: '📌 Angepinnte', pick: (all) => all.filter((p) => p.pinned).sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0)) },
+  shaky: { label: '〰 Wackelige', pick: (all) => all.filter(isShaky).sort((a, b) => (a.due || '').localeCompare(b.due || '')) },
+  listen: { label: '🎧 Hör-Karten', pick: (all) => shuffle(all.filter((p) => p.dir === 'en-de')) },
+  mixed: { label: '🔀 Gemischt', pick: (all) => shuffle(all.filter((p) => p.reps > 0)).slice(0, 20) },
+};
+
+const isShaky = (p) => p.reps > 0 && (p.lastRating === 'hard' || p.lastRating === 'again' || (p.lapses > 0 && p.streak < 2));
+
+function shuffle(list) {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+async function startFree(kind) {
   const phrases = await db.getAll('phrases');
-  const queue = phrases.filter((p) => p.pinned && p.en).sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0));
-  return beginRound(queue, 'pinned', phrases);
+  const ready = phrases.filter(srs.isReady);
+  s.freeKind = kind;
+  return beginRound(FREE[kind].pick(ready), 'free', phrases);
 }
 
 async function beginRound(queue, mode, phrases) {
@@ -83,7 +104,7 @@ async function beginRound(queue, mode, phrases) {
     queue, started: Date.now(), done: 0, retried: new Set(),
     counts: { good: 0, hard: 0, again: 0 }, firstCard: true,
   });
-  if (!queue.length) return renderEmpty(phrases);
+  if (!queue.length) return renderHome(phrases);
   // Stimme für die ganze Runde der Reihe nach im Hintergrund erzeugen.
   queue.forEach((q) => { voice.prepare(q.en, 'en'); voice.prepare(q.de, 'de'); });
   clearInterval(ticker);
@@ -98,12 +119,12 @@ function continueRound() {
 }
 
 function roundOver() {
-  return !s.queue.length || Date.now() - s.started >= SESSION_MS;
+  return !s.queue.length || Date.now() - s.started >= s.sessionMs;
 }
 
 function updateTimeline() {
   const bar = root?.querySelector('[data-time]');
-  if (bar) bar.style.width = Math.min(100, ((Date.now() - s.started) / SESSION_MS) * 100) + '%';
+  if (bar) bar.style.width = Math.min(100, ((Date.now() - s.started) / s.sessionMs) * 100) + '%';
 }
 
 // ---------- Karte ----------
@@ -119,7 +140,10 @@ function showCard() {
     <section class="review">
       <div class="timeline"><span data-time></span></div>
       <header class="bar">
-        <span class="muted small">${s.mode === 'pinned' ? '📌 Angepinnte · freies Üben' : ''}${s.card.retry ? ' zweiter Anlauf' : ''}</span>
+        <span class="bar-left">
+          <button class="link small" data-overview>Übersicht</button>
+          <span class="muted small">${s.mode === 'free' ? FREE[s.freeKind].label + ' · frei' : ''}${s.card.retry ? ' · zweiter Anlauf' : ''}</span>
+        </span>
         <label class="level">
           <span>Tempo: <b data-level-label>${lv().label}</b></span>
           <input type="range" min="1" max="5" step="1" value="${s.level}" data-level>
@@ -145,6 +169,11 @@ function showCard() {
     s.level = Number(e.target.value);
     root.querySelector('[data-level-label]').textContent = lv().label;
     await db.setSetting('level', s.level);
+  });
+  root.querySelector('[data-overview]').addEventListener('click', () => {
+    cancelRecording();
+    stopAudio();
+    renderEnd();
   });
   root.querySelector('[data-say-de]').addEventListener('click', () => (listen
     ? audio.speak(p.en, { lang: 'en', rate: lv().rate })
@@ -421,7 +450,7 @@ async function flagOdd() {
   p.refined = false;
   p.updated = Date.now();
   await db.put('phrases', p);
-  toast('Vorgemerkt – kommt beim nächsten Veredeln mit.');
+  toast('Vorgemerkt – erscheint bei der KI-Prüfung unter „Komisch markiert“.');
 }
 
 // ---------- 4. Bewertung ----------
@@ -440,7 +469,7 @@ async function rate(rating) {
 
   s.queue.shift();
   let msg;
-  if (s.mode === 'pinned') {
+  if (s.mode === 'free') {
     // Freies Üben: Plan bleibt unberührt. Was nicht saß, kommt in dieser Runde nochmal.
     s.done++;
     s.counts[rating]++;
@@ -473,60 +502,65 @@ async function undoRating(u) {
   showCard();
 }
 
-// ---------- Ende und Leerlauf ----------
+// ---------- Übersicht (nach der Runde und wenn nichts fällig ist) ----------
 
 async function renderEnd() {
   const phrases = await db.getAll('phrases');
   const minutes = Math.max(1, Math.round((Date.now() - s.started) / 60000));
-  const rest = s.queue.length;
-  const pinnedMode = s.mode === 'pinned';
-  const more = rest || pinnedMode || srs.buildQueue(phrases, { ignoreNewLimit: true }).length;
-  const next = srs.nextDue(phrases);
   const { good, hard, again } = s.counts;
-
-  root.innerHTML = '';
-  root.appendChild(h(`
-    <section class="done">
-      <h2>Runde vorbei</h2>
-      <p class="finding">${s.done} ${s.done === 1 ? 'Karte' : 'Karten'} in ${minutes} Min.: ${good} sitzen, ${hard} wackelig, ${again} noch nicht.</p>
-      ${pinnedMode ? '<p class="muted">Freies Üben – dein Wiederholungsplan bleibt, wie er war.</p>' : ''}
-      ${next && !pinnedMode ? `<p class="muted">Als Nächstes: ${formatDay(next.date)} ${next.count} ${next.count === 1 ? 'Karte' : 'Karten'}.</p>` : ''}
-      ${rest ? `<p class="muted">Noch ${rest} offen – die laufen nicht weg.</p>` : ''}
-      <div class="stack">
-        ${more ? `<button class="primary" data-more>${pinnedMode && !rest ? 'Angepinnte nochmal' : 'Noch eine Runde'}</button>` : ''}
-      </div>
-    </section>
-  `));
-  root.querySelector('[data-more]')?.addEventListener('click', () => (rest ? continueRound() : pinnedMode ? startPinned() : startRound(true)));
-  if (!pinnedMode) addPinnedButton(phrases);
+  renderHome(phrases, {
+    title: 'Runde vorbei',
+    finding: s.done
+      ? `${s.done} ${s.done === 1 ? 'Karte' : 'Karten'} in ${minutes} Min.: ${good} sitzen, ${hard} wackelig, ${again} noch nicht.`
+        + (s.mode === 'free' ? ' Freies Üben – dein Plan bleibt, wie er war.' : '')
+      : '',
+  });
 }
 
-// "Angepinnte üben", wenn es angepinnte Sätze gibt.
-function addPinnedButton(phrases) {
-  const n = phrases.filter((p) => p.pinned && p.en).length;
-  if (!n || !root) return;
-  const btn = h(`<button class="secondary">📌 Angepinnte üben (${n})</button>`);
-  btn.addEventListener('click', startPinned);
-  root.querySelector('.stack')?.appendChild(btn);
-}
-
-function renderEmpty(phrases) {
+// Keine Sackgasse: Überblick plus freie Übungsmöglichkeiten.
+function renderHome(phrases, { title, finding } = {}) {
+  if (!root) return;
+  clearInterval(ticker);
+  const ready = phrases.filter(srs.isReady);
+  const planRest = s.mode === 'plan' && s.queue?.length ? s.queue.length : 0;
+  const due = srs.buildQueue(phrases, { newPerDay: NEW_PER_DAY }).length;
+  const fresh = ready.filter((p) => p.reps === 0).length;
+  const stable = ready.filter((p) => p.reps > 0 && p.streak >= 2).length;
+  const shaky = ready.filter(isShaky).length;
+  const unchecked = phrases.filter(srs.waitsForCheck).length;
   const next = srs.nextDue(phrases);
-  const fresh = phrases.filter(srs.isNew).length;
-  const pending = phrases.filter((p) => p.learn !== false && !(p.en && p.de)).length;
+  const counts = Object.fromEntries(Object.entries(FREE).map(([k, f]) => [k, f.pick(ready).length]));
+
+  let main = '';
+  if (planRest) main = `<button class="primary" data-go="continue">Weiter üben (${planRest} offen)</button>`;
+  else if (due) main = `<button class="primary" data-go="plan">Fällige üben (${due})</button>`;
+  else if (fresh) main = `<button class="primary" data-go="new">Neue Karten üben (${fresh})</button>`;
 
   root.innerHTML = '';
   root.appendChild(h(`
-    <section class="done">
-      <h2>Heute nichts fällig</h2>
-      ${next ? `<p class="finding">Nächste Karten ${formatDay(next.date)}: ${next.count}.</p>` : ''}
-      ${pending ? `<p class="muted">${pending === 1 ? '1 erfasster Satz wartet' : `${pending} erfasste Sätze warten`} aufs Veredeln (Reiter „Sätze“).</p>` : ''}
-      ${!next && !fresh ? '<p class="muted">Übersetze Sätze aus deinem Alltag unter „Übersetzen“ – sie landen automatisch hier.</p>' : ''}
-      <div class="stack">
-        ${fresh ? `<button class="primary" data-new>Neue Karten üben (${fresh})</button>` : ''}
+    <section class="done home">
+      <h2>${title || (due ? 'Bereit' : 'Heute nichts fällig')}</h2>
+      ${finding ? `<p class="finding">${finding}</p>` : ''}
+      <p class="muted">${[
+        stable ? `${stable} sitzen` : '',
+        shaky ? `${shaky} wackeln` : '',
+        fresh ? `${fresh} neu` : '',
+      ].filter(Boolean).join(' · ') || 'Noch keine Karten geübt.'}</p>
+      ${next && !due ? `<p class="muted">Nächste fällige Karten: ${formatDay(next.date)} (${next.count}).</p>` : ''}
+      ${unchecked ? `<p class="muted small">${unchecked === 1 ? '1 übersetzter Satz wartet auf die KI-Prüfung (Reiter „Sätze“), bevor er geübt wird.' : `${unchecked} übersetzte Sätze warten auf die KI-Prüfung (Reiter „Sätze“), bevor sie geübt werden.`}</p>` : ''}
+      <div class="stack">${main}</div>
+
+      <h3>Freies Üben <span class="muted small">– ändert deinen Plan nicht</span></h3>
+      <div class="free-grid">
+        ${Object.entries(FREE).map(([k, f]) => `<button class="secondary" data-free="${k}" ${counts[k] ? '' : 'disabled'}>${f.label}<span class="muted small">${counts[k]}</span></button>`).join('')}
       </div>
+      ${!ready.length ? '<p class="muted">Übersetze Sätze aus deinem Alltag unter „Übersetzen“ – sie landen automatisch hier.</p>' : ''}
     </section>
   `));
-  root.querySelector('[data-new]')?.addEventListener('click', () => startRound(true));
-  addPinnedButton(phrases);
+  root.querySelector('[data-go]')?.addEventListener('click', (e) => {
+    const go = e.currentTarget.dataset.go;
+    if (go === 'continue') continueRound();
+    else startRound(go === 'new');
+  });
+  root.querySelectorAll('[data-free]').forEach((b) => b.addEventListener('click', () => startFree(b.dataset.free)));
 }
