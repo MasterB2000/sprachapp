@@ -1,4 +1,4 @@
-// Speicher: Überblick, Veredeln per Prompt, Export/Import, Liste aller Wendungen.
+// Sätze: Überblick, Veredeln per Prompt, Export/Import, Liste aller Wendungen.
 
 import * as db from './db.js';
 import * as srs from './srs.js';
@@ -208,10 +208,12 @@ function renderList(phrases) {
       a.hidden = !a.hidden;
     });
     li.querySelector('[data-del]').addEventListener('click', async () => {
-      if (!confirm(`„${p.de}“ löschen?`)) return;
-      await db.del('phrases', p.id);
-      await db.del('recordings', p.id);
+      const undo = await db.deletePhrase(p.id);
       li.remove();
+      toast('Gelöscht.', {
+        ms: 5000,
+        action: { label: 'Rückgängig', run: async () => { await db.restorePhrase(undo); if (root) await render(); } },
+      });
     });
     list.appendChild(li);
   }

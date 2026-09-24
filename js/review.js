@@ -453,8 +453,8 @@ function renderEmpty(phrases) {
     <section class="done">
       <h2>Heute nichts fällig</h2>
       ${next ? `<p class="finding">Nächste Karten ${formatDay(next.date)}: ${next.count}.</p>` : ''}
-      ${pending ? `<p class="muted">${pending === 1 ? '1 erfasster Satz wartet' : `${pending} erfasste Sätze warten`} aufs Veredeln (Speicher).</p>` : ''}
-      ${!next && !fresh ? '<p class="muted">Erfasse Sätze aus deinem Alltag unter „Erfassen“.</p>' : ''}
+      ${pending ? `<p class="muted">${pending === 1 ? '1 erfasster Satz wartet' : `${pending} erfasste Sätze warten`} aufs Veredeln (Reiter „Sätze“).</p>` : ''}
+      ${!next && !fresh ? '<p class="muted">Übersetze Sätze aus deinem Alltag unter „Übersetzen“ – sie landen automatisch hier.</p>' : ''}
       <div class="stack">
         ${fresh ? `<button class="primary" data-new>Neue Karten üben (${fresh})</button>` : ''}
       </div>

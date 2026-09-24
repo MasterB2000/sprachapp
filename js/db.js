@@ -104,6 +104,22 @@ export async function seedStartLesson() {
   return added;
 }
 
+// Löscht eine Wendung samt Aufnahme. Gibt zurück, was zum Rückgängigmachen nötig ist.
+export async function deletePhrase(id) {
+  const phrase = await get('phrases', id);
+  const recording = await get('recordings', id);
+  await del('phrases', id);
+  await del('recordings', id);
+  return { phrase, recording };
+}
+
+export async function restorePhrase({ phrase, recording }) {
+  if (phrase) await put('phrases', phrase);
+  if (recording) await put('recordings', recording);
+}
+
+export const isStartPhrase = (p) => /^s\d+$/.test(p.id);
+
 export async function exportData() {
   const phrases = await getAll('phrases');
   return {

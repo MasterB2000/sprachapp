@@ -85,8 +85,11 @@ button:disabled { opacity: 0.4; cursor: default; }
 .tabs button {
   flex: 1;
   min-width: 0;
-  padding: 12px 2px;
-  font-size: 0.8rem;
+  padding: 8px 2px 6px;
+  font-size: 0.72rem;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
   background: none;
   border-radius: 0;
   color: var(--muted);
@@ -119,7 +122,7 @@ button:disabled { opacity: 0.4; cursor: default; }
 .de-sentence { font-size: 1.3rem; margin: 0 32px 16px 0; }
 
 .answer { margin-top: 4px; }
-.answer.no-literal .de { display: none; }
+.answer.no-literal .de, .decode.plain .de { display: none; }
 .literal { color: var(--sand); margin: 0 0 8px; letter-spacing: 0.01em; }
 
 .decode { display: flex; flex-wrap: wrap; gap: 6px 12px; }
@@ -212,7 +215,9 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .result .de-sentence { margin: 0; font-size: 1.1rem; color: var(--muted); }
 
 .recent { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.recent li { display: grid; background: var(--surface); padding: 10px 12px; border-radius: 10px; }
+.recent li { display: flex; align-items: flex-start; gap: 8px; background: var(--surface); padding: 10px 6px 10px 12px; border-radius: 10px; }
+.recent .texts { flex: 1; display: grid; min-width: 0; }
+.recent .remove { color: var(--muted); min-width: 44px; min-height: 44px; font-size: 1rem; }
 .recent .de { color: var(--muted); font-size: 0.9rem; }
 
 /* ---------- Speicher ---------- */
@@ -318,3 +323,6 @@ code { font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border
 
 .retry { justify-self: center; width: 70%; font-weight: 600; }
 .mic-small { min-height: 56px; font-size: 1rem; }
+
+.tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tabs span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

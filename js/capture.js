@@ -1,10 +1,10 @@
-// Translator-Ersatz: deutschen Satz diktieren → englische Fassung → automatisch im Speicher.
+// Übersetzen (Translator-Ersatz): deutschen Satz diktieren → englische Fassung → landet automatisch in den Übungskarten.
 
 import * as db from './db.js';
 import * as audio from './audio.js';
 import { translate } from './translate.js';
 import { renderDecode } from './decode.js';
-import { h, esc } from './ui.js';
+import { h, esc, toast } from './ui.js';
 
 let root = null;
 
@@ -14,8 +14,9 @@ export async function enter(el) {
   root.appendChild(h(`
     <section class="capture">
       <label class="field">
-        <span class="muted">Deutscher Satz – Mikrofon der Tastatur antippen und sprechen</span>
+        <span class="muted">Was willst du auf Englisch sagen? Mikrofon der Tastatur antippen und auf Deutsch sprechen.</span>
         <textarea data-de rows="3" placeholder="z. B. Ich will morgen Brot backen."></textarea>
+        <span class="muted small">Tipp: „Komma“, „Punkt“ und „Fragezeichen“ mitsprechen – dann übersetzt es deutlich besser.</span>
       </label>
       <button class="primary" data-go>Auf Englisch</button>
 
@@ -29,7 +30,7 @@ export async function enter(el) {
         <p class="muted" data-status></p>
       </div>
 
-      <h3>Zuletzt erfasst</h3>
+      <h3>Zuletzt übersetzt</h3>
       <ul class="recent" data-recent></ul>
     </section>
   `));
@@ -71,13 +72,13 @@ async function capture(text) {
   root.querySelectorAll('[data-say],[data-slow]').forEach((b) => (b.hidden = !result));
   if (result) {
     renderDecode(root.querySelector('[data-en-out]'), phrase);
-    status.textContent = 'Gespeichert. Kommt in der nächsten Runde dran.';
+    status.textContent = 'Gespeichert – kommt beim Üben als Karte dran.';
     root.querySelector('[data-say]').onclick = () => audio.speak(phrase.en, { rate: 0.95 });
     root.querySelector('[data-slow]').onclick = () => audio.speak(phrase.en, { rate: 0.7 });
     audio.speak(phrase.en, { rate: 0.95 });
   } else {
     root.querySelector('[data-en-out]').innerHTML = '';
-    status.textContent = 'Gemerkt. Die englische Fassung kommt beim Veredeln (Speicher → Prompt).';
+    status.textContent = 'Gemerkt. Die englische Fassung kommt beim Veredeln (Reiter „Sätze“).';
   }
 
   root.querySelector('[data-de]').value = '';
@@ -87,14 +88,34 @@ async function capture(text) {
 async function renderRecent() {
   const list = root.querySelector('[data-recent]');
   const own = (await db.getAll('phrases'))
-    .filter((p) => p.source !== 'start')
+    .filter((p) => !db.isStartPhrase(p))
     .sort((a, b) => b.created - a.created)
     .slice(0, 8);
-  list.innerHTML = own.length
-    ? own.map((p) => `
-        <li>
+  list.innerHTML = '';
+  if (!own.length) {
+    list.innerHTML = '<li class="muted">Noch nichts. Der nächste Satz, der dir fehlt, gehört hierher.</li>';
+    return;
+  }
+  for (const p of own) {
+    const li = h(`
+      <li>
+        <div class="texts">
           <span class="de">${esc(p.de)}</span>
           <span class="en">${p.en ? esc(p.en) : '<i class="muted">wartet aufs Veredeln</i>'}</span>
-        </li>`).join('')
-    : '<li class="muted">Noch nichts. Der nächste Satz, der dir fehlt, gehört hierher.</li>';
+        </div>
+        <button class="icon-btn remove" title="Löschen" aria-label="Löschen">✕</button>
+      </li>
+    `);
+    li.querySelector('.remove').addEventListener('click', () => removePhrase(p));
+    list.appendChild(li);
+  }
+}
+
+async function removePhrase(p) {
+  const undo = await db.deletePhrase(p.id);
+  if (root) await renderRecent();
+  toast('Gelöscht.', {
+    ms: 5000,
+    action: { label: 'Rückgängig', run: async () => { await db.restorePhrase(undo); if (root) await renderRecent(); } },
+  });
 }

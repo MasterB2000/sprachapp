@@ -11,7 +11,7 @@ export const hasDecode = (phrase) => Array.isArray(phrase.decode) && phrase.deco
 export function renderDecode(container, phrase) {
   container.innerHTML = '';
   const line = document.createElement('div');
-  line.className = 'decode';
+  line.className = hasDecode(phrase) ? 'decode' : 'decode plain';
   for (const [en, de] of pairs(phrase)) {
     const w = document.createElement('span');
     w.className = 'w';
