@@ -1,6 +1,7 @@
-// Übersetzungsquelle "bergamot": Deutsch → Englisch direkt im Handy, ohne Netz.
+// Übersetzungsquelle "bergamot": Deutsch ⇄ Englisch direkt im Handy, ohne Netz.
 // Programm und Modell liegen unter vendor/bergamot (Mozilla/Bergamot, MPL-2.0).
-// Das Modell (~23 MB) wird beim ersten Gebrauch geladen und danach vom Service Worker vorgehalten.
+// Jede Richtung hat ein eigenes Modell (~23 bzw. ~21 MB). Es wird erst beim ersten Gebrauch
+// dieser Richtung geladen und danach vom Service Worker vorgehalten.
 
 let translator = null;
 
@@ -20,9 +21,9 @@ async function load() {
 export const bergamotSource = {
   name: 'bergamot',
   available: async () => typeof WebAssembly === 'object' && typeof Worker === 'function',
-  async translate(de) {
+  async translate(text, from = 'de', to = 'en') {
     const t = await load();
-    const res = await t.translate({ from: 'de', to: 'en', text: de, html: false });
+    const res = await t.translate({ from, to, text, html: false });
     return res.target.text;
   },
 };

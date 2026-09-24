@@ -2,7 +2,11 @@
 // seiner Wahl und die Antwort zurück. Streng im geforderten Format, großzügig beim Einlesen.
 
 export function buildRefinePrompt(phrases) {
-  const list = phrases.map((p) => ({
+  const list = phrases.map((p) => (p.dir === 'en-de' ? {
+    id: p.id,
+    en_gehoert: p.en,
+    ...(p.human ? { de_fest: p.de } : p.de ? { de_entwurf: p.de } : {}),
+  } : {
     id: p.id,
     de: p.de,
     ...(p.human ? { en_fest: p.en } : p.en ? { entwurf: p.en } : {}),
@@ -27,6 +31,7 @@ ANTWORTE AUSSCHLIESSLICH mit einem JSON-Array in genau dieser Form, ohne Einleit
 
 Die "id" jedes Eintrags unverändert übernehmen.
 Hat ein Eintrag "en_fest", wurde die englische Fassung von einem Menschen korrigiert: übernimm sie unverändert als "en" (auch "de" nicht ändern) und liefere nur "decode" und "note".
+Hat ein Eintrag "en_gehoert", hat der Lernende diesen englischen Satz im Gespräch gehört (per Spracheingabe erfasst, evtl. mit Erkennungsfehlern). Liefere dann in "en" den englischen Satz (nur offensichtliche Erkennungsfehler korrigieren), in "de" eine natürliche deutsche Bedeutung (bei "de_fest" diese unverändert übernehmen), dazu "decode" und "note".
 
 Sätze:
 ${JSON.stringify(list, null, 2)}

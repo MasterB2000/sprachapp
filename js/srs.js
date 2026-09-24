@@ -21,8 +21,8 @@ export function daysBetween(a, b) {
   return Math.round((new Date(y2, m2 - 1, d2) - new Date(y1, m1 - 1, d1)) / 86400000);
 }
 
-// Nur Wendungen mit englischer Fassung können geübt werden.
-export const isReady = (p) => Boolean(p.en);
+// Geübt wird, was beide Sprachen hat und nicht auf "nur übersetzen" steht.
+export const isReady = (p) => Boolean(p.en && p.de) && p.learn !== false;
 export const isNew = (p) => isReady(p) && p.reps === 0;
 export const isDue = (p, day = today()) => isReady(p) && p.reps > 0 && p.due <= day;
 

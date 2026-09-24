@@ -1,7 +1,10 @@
-// Übersetzen (Translator-Ersatz): deutschen Satz diktieren → englische Fassung → landet automatisch in den Übungskarten.
+// Übersetzen (Translator-Ersatz), zwei Richtungen:
+//   Deutsch → Englisch: was ich sagen will  → wird zur Sprech-Karte
+//   Englisch → Deutsch: was ich gehört habe → wird zur Hör-Karte
+// Jeder Satz landet automatisch in den Übungskarten, außer er steht auf "nur übersetzen".
 //
 // Liste darunter: angepinnte Sätze (verschiebbar) und zuletzt übersetzte.
-// Antippen klappt die Aktionen auf: Kopieren, Teilen, Bearbeiten, Anpinnen, Anhören, Zeigen, Löschen.
+// Antippen klappt die Aktionen auf: Kopieren, Teilen, Anhören, Zeigen, Bearbeiten, Anpinnen, Lernen, Löschen.
 
 import * as db from './db.js';
 import * as audio from './audio.js';
@@ -11,21 +14,47 @@ import { h, esc, toast, openOverlay, closeOverlay } from './ui.js';
 
 const RECENT = 15;
 
+const DIRS = {
+  'de-en': {
+    from: 'de', to: 'en', fromLabel: 'Deutsch', toLabel: 'Englisch', go: 'Auf Englisch',
+    ask: 'Was willst du auf Englisch sagen? Mikrofon der Tastatur antippen und auf Deutsch sprechen.',
+    hint: 'Tipp: „Komma“, „Punkt“ und „Fragezeichen“ mitsprechen – dann übersetzt es deutlich besser.',
+    placeholder: 'z. B. Ich will morgen Brot backen.',
+  },
+  'en-de': {
+    from: 'en', to: 'de', fromLabel: 'Englisch', toLabel: 'Deutsch', go: 'Auf Deutsch',
+    ask: 'Was hast du gehört? Tastatur auf Englisch stellen (Leertaste oder Globus) und nachsprechen.',
+    hint: 'Wird zur Hör-Karte: Beim Üben hörst du den Satz und sollst ihn verstehen.',
+    placeholder: 'z. B. Did you eat yet?',
+  },
+};
+
 let root = null;
 let openId = null;   // aufgeklappter Satz
+let dir = 'de-en';
+
+// Eingabe- und Ausgabeseite eines Satzes, je nach Richtung.
+const inputOf = (p) => (p.dir === 'en-de' ? p.en : p.de);
+const outputOf = (p) => (p.dir === 'en-de' ? p.de : p.en);
 
 export async function enter(el) {
   root = el;
   openId = null;
+  dir = await db.getSetting('captureDir', 'de-en');
   root.innerHTML = '';
   root.appendChild(h(`
     <section class="capture">
+      <div class="dir-switch">
+        <span data-from></span>
+        <button class="secondary swap" data-swap aria-label="Richtung tauschen">⇄</button>
+        <span data-to></span>
+      </div>
       <label class="field">
-        <span class="muted">Was willst du auf Englisch sagen? Mikrofon der Tastatur antippen und auf Deutsch sprechen.</span>
-        <textarea data-de rows="3" placeholder="z. B. Ich will morgen Brot backen."></textarea>
-        <span class="muted small">Tipp: „Komma“, „Punkt“ und „Fragezeichen“ mitsprechen – dann übersetzt es deutlich besser.</span>
+        <span class="muted" data-ask></span>
+        <textarea data-de rows="3"></textarea>
+        <span class="muted small" data-hint></span>
       </label>
-      <button class="primary" data-go>Auf Englisch</button>
+      <button class="primary" data-go></button>
 
       <div class="result" data-result hidden>
         <p class="de-sentence" data-de-out></p>
@@ -52,6 +81,13 @@ export async function enter(el) {
   `));
 
   const input = root.querySelector('[data-de]');
+  root.querySelector('[data-swap]').addEventListener('click', async () => {
+    dir = dir === 'de-en' ? 'en-de' : 'de-en';
+    await db.setSetting('captureDir', dir);
+    applyDir();
+    root.querySelector('[data-result]').hidden = true;
+  });
+  applyDir();
   root.querySelector('[data-go]').addEventListener('click', () => capture(input.value));
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); capture(input.value); }
@@ -68,40 +104,59 @@ export function leave() {
   root = null;
 }
 
+function applyDir() {
+  const d = DIRS[dir];
+  root.querySelector('[data-from]').textContent = d.fromLabel;
+  root.querySelector('[data-to]').textContent = d.toLabel;
+  root.querySelector('[data-ask]').textContent = d.ask;
+  root.querySelector('[data-hint]').textContent = d.hint;
+  root.querySelector('[data-de]').placeholder = d.placeholder;
+  root.querySelector('[data-de]').lang = d.from;
+  root.querySelector('[data-go]').textContent = d.go;
+}
+
 // ---------- Neu übersetzen ----------
 
 async function capture(text) {
-  const de = text.trim();
-  if (!de) return;
+  const input = text.trim();
+  if (!input) return;
+  const d = DIRS[dir];
   const go = root.querySelector('[data-go]');
   go.disabled = true;
   go.textContent = 'Übersetze …';
 
   let result = null;
-  try { result = await translate(de); } finally {
-    if (root) { go.disabled = false; go.textContent = 'Auf Englisch'; }
+  try { result = await translate(input, { from: d.from, to: d.to }); } finally {
+    if (root) { go.disabled = false; go.textContent = d.go; }
   }
   if (!root) return;
 
-  const phrase = db.makePhrase({ de, en: result?.en || '', source: result?.source || 'offen' });
+  const out = result?.text || '';
+  const phrase = db.makePhrase(dir === 'en-de'
+    ? { dir, en: input, de: out, source: result?.source || 'offen' }
+    : { dir, de: input, en: out, source: result?.source || 'offen' });
   await db.put('phrases', phrase);
 
   const box = root.querySelector('[data-result]');
   box.hidden = false;
-  root.querySelector('[data-de-out]').textContent = de;
+  root.querySelector('[data-de-out]').textContent = input;
   const status = root.querySelector('[data-status]');
+  const outEl = root.querySelector('[data-en-out]');
 
   box.querySelector('.row').hidden = !result;
   if (result) {
-    renderDecode(root.querySelector('[data-en-out]'), phrase);
-    status.textContent = 'Gespeichert – kommt beim Üben als Karte dran.';
-    root.querySelector('[data-copy-new]').onclick = () => copy(phrase.en);
+    if (dir === 'en-de') outEl.innerHTML = `<p class="out-de">${esc(out)}</p>`;
+    else renderDecode(outEl, phrase);
+    status.textContent = dir === 'en-de'
+      ? 'Gespeichert – kommt beim Üben als Hör-Karte dran.'
+      : 'Gespeichert – kommt beim Üben als Karte dran.';
+    root.querySelector('[data-copy-new]').onclick = () => copy(out);
     root.querySelector('[data-say]').onclick = () => audio.speak(phrase.en, { rate: 0.95 });
     root.querySelector('[data-show-new]').onclick = () => showBig(phrase);
     audio.speak(phrase.en, { rate: 0.95 });
   } else {
-    root.querySelector('[data-en-out]').innerHTML = '';
-    status.textContent = 'Gemerkt. Die englische Fassung kommt beim Veredeln (Reiter „Sätze“).';
+    outEl.innerHTML = '';
+    status.textContent = 'Gemerkt. Die Übersetzung kommt beim Veredeln (Reiter „Sätze“).';
   }
 
   root.querySelector('[data-de]').value = '';
@@ -134,9 +189,9 @@ function fillList(ul, phrases, pinnedList) {
         <div class="entry-row">
           ${pinnedList ? '<span class="grip" title="Zum Verschieben festhalten" aria-label="Verschieben">⠿</span>' : ''}
           <button class="texts">
-            <span class="de">${esc(p.de)}</span>
-            <span class="en">${p.en ? esc(p.en) : '<i class="muted">wartet aufs Veredeln</i>'}</span>
-            ${p.human ? '<span class="muted small">✓ von dir korrigiert</span>' : ''}
+            <span class="de">${esc(inputOf(p))}</span>
+            <span class="en">${outputOf(p) ? esc(outputOf(p)) : '<i class="muted">wartet aufs Veredeln</i>'}</span>
+            ${tags(p)}
           </button>
         </div>
       </li>
@@ -148,6 +203,14 @@ function fillList(ul, phrases, pinnedList) {
   }
 }
 
+function tags(p) {
+  const t = [];
+  if (p.dir === 'en-de') t.push('🎧 gehört');
+  if (p.human) t.push('✓ von dir korrigiert');
+  if (p.learn === false) t.push('nur übersetzt');
+  return t.length ? `<span class="muted small">${t.join(' · ')}</span>` : '';
+}
+
 function toggleOpen(id) {
   openId = openId === id ? null : id;
   renderLists();
@@ -156,24 +219,26 @@ function toggleOpen(id) {
 function actions(p) {
   const el = h(`
     <div class="actions">
-      <button class="accent-soft wide" data-a="copy" ${p.en ? '' : 'disabled'}>📋 Kopieren</button>
-      <button class="secondary" data-a="share" ${p.en && navigator.share ? '' : 'hidden'}>↗ Teilen</button>
+      <button class="accent-soft wide" data-a="copy" ${outputOf(p) ? '' : 'disabled'}>📋 Kopieren</button>
+      <button class="secondary" data-a="share" ${outputOf(p) && navigator.share ? '' : 'hidden'}>↗ Teilen</button>
       <button class="secondary" data-a="say" ${p.en ? '' : 'disabled'}>🔈 Anhören</button>
       <button class="secondary" data-a="show" ${p.en ? '' : 'disabled'}>⛶ Zeigen</button>
       <button class="secondary" data-a="edit-de">✎ Deutsch</button>
       <button class="secondary" data-a="edit-en">✎ Englisch</button>
       <button class="secondary" data-a="pin">${p.pinned ? '📌 Lösen' : '📌 Anpinnen'}</button>
+      <button class="secondary" data-a="learn">${p.learn === false ? '🎓 Lernen' : '🎓 Nicht lernen'}</button>
       <button class="secondary danger-soft" data-a="del">✕ Löschen</button>
     </div>
   `);
   const on = (a, fn) => el.querySelector(`[data-a="${a}"]`).addEventListener('click', fn);
-  on('copy', () => copy(p.en));
-  on('share', () => navigator.share({ text: p.en }).catch(() => {}));
+  on('copy', () => copy(outputOf(p)));
+  on('share', () => navigator.share({ text: outputOf(p) }).catch(() => {}));
   on('say', () => audio.speak(p.en, { rate: 0.95 }));
   on('show', () => showBig(p));
   on('edit-de', () => openEditor(p, 'de'));
   on('edit-en', () => openEditor(p, 'en'));
   on('pin', () => togglePin(p));
+  on('learn', () => toggleLearn(p));
   on('del', () => removePhrase(p));
   return el;
 }
@@ -198,8 +263,10 @@ async function copy(text) {
 
 // ---------- Bearbeiten ----------
 // Eigene Ansicht mit nur einem Feld, Speichern oben (die Tastatur verdeckt es so nie).
-// Deutsch geändert → neu übersetzen. Englisch geändert → gilt als von dir korrigiert
+// Ausgangssatz geändert → neu übersetzen. Übersetzung geändert → gilt als von dir korrigiert
 // und wird beim Veredeln nicht mehr überschrieben (nur die wörtliche Zeile kommt dazu).
+
+const isInput = (p, lang) => lang === (p.dir === 'en-de' ? 'en' : 'de');
 
 function openEditor(p, lang) {
   const el = h(`
@@ -209,11 +276,11 @@ function openEditor(p, lang) {
         <b>${lang === 'de' ? 'Deutsch ändern' : 'Englisch ändern'}</b>
         <button class="primary slim" data-e-save>Speichern</button>
       </div>
-      <p class="muted small">${lang === 'de'
+      <p class="muted small">${isInput(p, lang)
         ? 'Danach wird der Satz neu übersetzt.'
         : 'Zum Beispiel so, wie es dir jemand korrigiert hat. Deine Fassung bleibt dann geschützt.'}</p>
-      <textarea data-e-text rows="3" spellcheck="true"></textarea>
-      ${lang === 'en' ? `<p class="muted small">Deutsch: ${esc(p.de)}</p>` : ''}
+      <textarea data-e-text rows="3" spellcheck="true" lang="${lang}"></textarea>
+      ${isInput(p, lang) ? '' : `<p class="muted small">${lang === 'en' ? 'Deutsch' : 'Englisch'}: ${esc(lang === 'en' ? p.de : p.en)}</p>`}
     </div>
   `);
   const ta = el.querySelector('[data-e-text]');
@@ -228,22 +295,33 @@ function openEditor(p, lang) {
 }
 
 async function saveEdit(p, lang, text, el) {
-  const old = lang === 'de' ? p.de : p.en;
-  if (text === old) return closeOverlay();
-  if (!text && lang === 'de') return toast('Der deutsche Satz darf nicht leer sein.');
+  const other = lang === 'de' ? 'en' : 'de';
+  if (text === p[lang]) return closeOverlay();
+  if (!text && isInput(p, lang)) return toast('Der Ausgangssatz darf nicht leer sein.');
 
   const fresh = await db.get('phrases', p.id);
-  if (lang === 'en') {
-    Object.assign(fresh, { en: text, human: Boolean(text), decode: null, refined: false, source: text ? 'mensch' : 'offen' });
+  if (!isInput(p, lang)) {
+    Object.assign(fresh, { [lang]: text, human: Boolean(text), decode: null, refined: false, source: text ? 'mensch' : 'offen' });
   } else {
     el.querySelector('[data-e-save]').textContent = 'Übersetze …';
-    const result = await translate(text);
-    Object.assign(fresh, { de: text, en: result?.en || '', human: false, decode: null, refined: false, source: result?.source || 'offen' });
+    const result = await translate(text, { from: lang, to: other });
+    Object.assign(fresh, { [lang]: text, [other]: result?.text || '', human: false, decode: null, refined: false, source: result?.source || 'offen' });
   }
   fresh.updated = Date.now();
   await db.put('phrases', fresh);
   closeOverlay();
-  toast(lang === 'en' ? 'Gespeichert – deine Fassung bleibt.' : 'Neu übersetzt und gespeichert.');
+  toast(isInput(p, lang) ? 'Neu übersetzt und gespeichert.' : 'Gespeichert – deine Fassung bleibt.');
+  renderLists();
+}
+
+// ---------- Lernen an/aus ----------
+
+async function toggleLearn(p) {
+  const fresh = await db.get('phrases', p.id);
+  fresh.learn = fresh.learn === false;
+  fresh.updated = Date.now();
+  await db.put('phrases', fresh);
+  toast(fresh.learn ? 'Kommt wieder beim Üben dran.' : 'Nur übersetzt – kommt nicht beim Üben dran.');
   renderLists();
 }
 

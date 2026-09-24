@@ -26,7 +26,7 @@ async function render() {
   const day = srs.today();
   const due = phrases.filter((p) => srs.isDue(p, day)).length;
   const fresh = phrases.filter(srs.isNew).length;
-  const unrefined = phrases.filter((p) => !p.refined);
+  const unrefined = phrases.filter((p) => !p.refined && p.learn !== false);
 
   root.innerHTML = '';
   root.appendChild(h(`
@@ -191,7 +191,7 @@ function renderList(phrases) {
   const list = root.querySelector('[data-phrases]');
   const sorted = [...phrases].sort((a, b) => b.created - a.created);
   for (const p of sorted) {
-    const when = !p.en ? 'wartet aufs Veredeln' : p.reps === 0 ? 'neu' : `fällig ${formatDay(p.due)}`;
+    const when = p.learn === false ? 'nur übersetzt' : !p.en || !p.de ? 'wartet aufs Veredeln' : p.reps === 0 ? 'neu' : `fällig ${formatDay(p.due)}`;
     const li = h(`
       <li>
         <button class="phrase-row">

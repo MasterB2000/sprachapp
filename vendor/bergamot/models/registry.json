@@ -18,5 +18,25 @@
       "expectedSha256Hash": "417668f2ed297970febafb5b079a9d5ebc4ed0b3550ac8386d67a90473a09bd7",
       "modelType": "prod"
     }
+  },
+  "ende": {
+    "model": {
+      "name": "vendor/bergamot/models/ende/model.ende.intgemm.alphas.bin",
+      "size": 17140835,
+      "expectedSha256Hash": "b3e980d6602ab0bdfe8d9315cb5fc282a16bb1c8dccf38e70945c584551c4318",
+      "modelType": "prod"
+    },
+    "lex": {
+      "name": "vendor/bergamot/models/ende/lex.50.50.ende.s2t.bin",
+      "size": 3943644,
+      "expectedSha256Hash": "f03eb8245042feb7a5800815b8d0dc215d7a60691632405b65c461d250cedbe6",
+      "modelType": "prod"
+    },
+    "vocab": {
+      "name": "vendor/bergamot/models/deen/vocab.deen.spm",
+      "size": 784269,
+      "expectedSha256Hash": "417668f2ed297970febafb5b079a9d5ebc4ed0b3550ac8386d67a90473a09bd7",
+      "modelType": "prod"
+    }
   }
 }

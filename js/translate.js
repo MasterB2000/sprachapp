@@ -2,7 +2,8 @@
 //
 // Mehrere Quellen, in Reihenfolge der Anmeldung gefragt. Die erste verfügbare liefert.
 // Jede Quelle ist ein Objekt:
-//   { name: 'bergamot', available: async () => bool, translate: async (de) => en }
+//   { name: 'bergamot', available: async () => bool, translate: async (text, from, to) => übersetzung }
+// Richtung: from/to als Sprachkürzel ('de', 'en'). Standard ist Deutsch → Englisch.
 //
 // Geplante Quellen: 'bergamot' (Handy, offline), 'pc' (Ollama, ab Schicht X).
 // Der Prompt-Austausch (prompt.js) veredelt nachträglich und läuft nicht über diese Liste.
@@ -13,12 +14,12 @@ export function registerSource(source) {
   sources.push(source);
 }
 
-export async function translate(de) {
+export async function translate(text, { from = 'de', to = 'en' } = {}) {
   for (const src of sources) {
     try {
       if (!(await src.available())) continue;
-      const en = (await src.translate(de))?.trim();
-      if (en) return { en, source: src.name };
+      const out = (await src.translate(text, from, to))?.trim();
+      if (out) return { text: out, en: to === 'en' ? out : undefined, source: src.name };
     } catch (err) {
       console.warn(`Übersetzer ${src.name} gescheitert:`, err);
     }

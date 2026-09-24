@@ -2,7 +2,7 @@
 // Online: immer frisch aus dem Netz holen (Änderungen sind sofort da) und Kopie ablegen.
 // Offline: Kopie ausliefern.
 
-const CACHE = 'sprachapp-v15';
+const CACHE = 'sprachapp-v17';
 // Eigener Speicher für große Modelldateien: überlebt App-Updates, wird nur bei neuem Modell erhöht.
 const VENDOR_CACHE = 'sprachapp-vendor-v1';
 
@@ -52,7 +52,8 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
 
   // Große Modelldateien: einmal laden, danach nur noch aus dem Speicher.
-  if (url.pathname.includes('/vendor/')) {
+  // Kleine Listen und Konfigurationen (.json) laufen wie App-Dateien – sonst sähe die App neue Modelle nie.
+  if (url.pathname.includes('/vendor/') && !url.pathname.endsWith('.json')) {
     e.respondWith(
       caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
         if (res.ok) {

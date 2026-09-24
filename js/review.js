@@ -6,6 +6,9 @@
 //   3. Auflösung – Englisch bleibt stehen; Muster / Ich nur auf Knopfdruck
 //   4. Bewertung – Noch nicht / Wackelig / Sitzt (Tipp begrenzt die Bewertung)
 // "Nochmal versuchen" führt mit derselben Karte zurück zu 1.
+//
+// Hör-Karten (gehörte Sätze, Richtung en-de): Englisch wird vorgespielt, du sollst es verstehen.
+// Englisch mitlesen ist der Tipp (höchstens "Wackelig"); Auflösen zeigt die Bedeutung.
 
 import * as db from './db.js';
 import * as srs from './srs.js';
@@ -108,7 +111,8 @@ function updateTimeline() {
 function showCard() {
   if (!root) return;
   const p = s.queue[0];
-  s.card = { phrase: p, blob: null, help: 0, retry: s.retried.has(p.id) };
+  const listen = p.dir === 'en-de';
+  s.card = { phrase: p, blob: null, help: 0, retry: s.retried.has(p.id), listen };
 
   root.innerHTML = '';
   root.appendChild(h(`
@@ -123,8 +127,8 @@ function showCard() {
       </header>
 
       <div class="card">
-        <p class="de-sentence">${esc(p.de)}</p>
-        <button class="icon-btn" data-say-de title="Deutsch anhören">🔈</button>
+        <p class="de-sentence" data-top>${listen ? '🎧 Was bedeutet das?' : esc(p.de)}</p>
+        <button class="icon-btn" data-say-de title="${listen ? 'Englisch nochmal hören' : 'Deutsch anhören'}">🔈</button>
         <p class="literal" data-literal hidden></p>
         <div class="answer" data-answer hidden></div>
         <p class="note" data-note hidden></p>
@@ -142,7 +146,9 @@ function showCard() {
     root.querySelector('[data-level-label]').textContent = lv().label;
     await db.setSetting('level', s.level);
   });
-  root.querySelector('[data-say-de]').addEventListener('click', () => audio.speak(p.de, { lang: 'de', rate: lv().rate + 0.1 }));
+  root.querySelector('[data-say-de]').addEventListener('click', () => (listen
+    ? audio.speak(p.en, { lang: 'en', rate: lv().rate })
+    : audio.speak(p.de, { lang: 'de', rate: lv().rate + 0.1 })));
 
   askPhase();
 }
@@ -157,6 +163,7 @@ function controls(html) {
 
 function askPhase() {
   const { phrase: p } = s.card;
+  if (s.card.listen) return askListen();
   showLiteral(s.literal === 'always' || s.card.help >= 1);
 
   // Neue und unsichere Karten zeigen den Tipp deutlich, gut sitzende nur dezent.
@@ -175,6 +182,28 @@ function askPhase() {
   c.querySelector('[data-mic]').addEventListener('click', toggleRecording);
   c.querySelector('[data-help]').addEventListener('click', askForHelp);
   if (!audio.canRecord()) c.querySelector('[data-mic]').hidden = true;
+}
+
+// Hör-Karte: vorspielen, verstehen, dann auflösen.
+function askListen() {
+  const { phrase: p } = s.card;
+  const lit = root.querySelector('[data-literal]');
+  lit.textContent = p.en;
+  lit.classList.add('en-read');
+  lit.hidden = s.card.help < 1;
+  const c = controls(`
+    <button class="secondary listen-again" data-listen>▶ Nochmal anhören</button>
+    <button class="primary" data-solve>Auflösen</button>
+    ${s.card.help < 1 ? '<button class="secondary help" data-read>Englisch mitlesen</button>' : ''}
+  `);
+  c.querySelector('[data-listen]').addEventListener('click', () => { stopAudio(); audio.speak(p.en, { lang: 'en', rate: lv().rate }); });
+  c.querySelector('[data-solve]').addEventListener('click', reveal);
+  c.querySelector('[data-read]')?.addEventListener('click', () => {
+    s.card.help = 1;
+    lit.hidden = false;
+    c.querySelector('[data-read]').remove();
+  });
+  audio.speak(p.en, { lang: 'en', rate: lv().rate });
 }
 
 function literalAvailable() {
@@ -285,13 +314,19 @@ function startMeter() {
 
 // Mit sichtbarer Lösung nachsprechen: der Text bleibt stehen.
 function micLabel() {
+  if (s.card.listen) return s.card.blob ? 'Nochmal nachsprechen' : 'Nachsprechen';
   return s.card.blob ? 'Nochmal sprechen' : 'Jetzt selbst sagen';
 }
 
 function reveal() {
   s.card.revealed = true;
   const { phrase: p, blob, help } = s.card;
-  showLiteral(false);
+  if (s.card.listen) {
+    root.querySelector('[data-top]').textContent = p.de;
+    root.querySelector('[data-literal]').hidden = true;
+  } else {
+    showLiteral(false);
+  }
   const answer = root.querySelector('[data-answer]');
   renderDecode(answer, p);
   answer.classList.toggle('no-literal', s.literal === 'off');
@@ -310,7 +345,7 @@ function reveal() {
       <span class="mic-dot"></span>
       <span data-mic-label>${micLabel()}</span>
     </button>
-    <button class="secondary retry" data-retry>↻ Nochmal versuchen</button>
+    ${s.card.listen ? '' : '<button class="secondary retry" data-retry>↻ Nochmal versuchen</button>'}
     <div class="row links">
       ${p.note ? '<button class="link" data-why>Warum?</button>' : ''}
       <button class="link" data-odd>Komisch?</button>
@@ -320,12 +355,12 @@ function reveal() {
       <button class="grade-mid" data-rate="hard" ${help >= 2 ? 'disabled' : ''}>Wackelig</button>
       <button class="grade-good" data-rate="good" ${help >= 1 ? 'disabled' : ''}>Sitzt</button>
     </div>
-    ${help ? `<p class="muted small">${help >= 2 ? 'Mit Lösung' : 'Mit Tipp'} geht höchstens „${help >= 2 ? 'Noch nicht' : 'Wackelig'}“ – kein Tadel, die Karte kommt nur bald wieder.</p>` : ''}
+    ${help ? `<p class="muted small">${help >= 2 ? 'Mit Lösung' : s.card.listen ? 'Mitgelesen' : 'Mit Tipp'} geht höchstens „${help >= 2 ? 'Noch nicht' : 'Wackelig'}“ – kein Tadel, die Karte kommt nur bald wieder.</p>` : ''}
   `);
   c.querySelectorAll('[data-play]').forEach((b) => b.addEventListener('click', () => play(b.dataset.play)));
   c.querySelector('[data-mic]').addEventListener('click', toggleRecording);
   if (!audio.canRecord()) c.querySelector('[data-mic]').hidden = true;
-  c.querySelector('[data-retry]').addEventListener('click', retry);
+  c.querySelector('[data-retry]')?.addEventListener('click', retry);
   c.querySelector('[data-why]')?.addEventListener('click', () => {
     const n = root.querySelector('[data-note]');
     n.textContent = p.note;
@@ -478,7 +513,7 @@ function addPinnedButton(phrases) {
 function renderEmpty(phrases) {
   const next = srs.nextDue(phrases);
   const fresh = phrases.filter(srs.isNew).length;
-  const pending = phrases.filter((p) => !srs.isReady(p)).length;
+  const pending = phrases.filter((p) => p.learn !== false && !(p.en && p.de)).length;
 
   root.innerHTML = '';
   root.appendChild(h(`

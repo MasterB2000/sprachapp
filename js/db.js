@@ -72,6 +72,8 @@ export function makePhrase(fields) {
     note: '',          // Erklärung, erscheint nur auf Nachfrage
     source: 'manual',  // start | bergamot | prompt | pc
     refined: false,    // true, sobald eine Fassung mit Dekodierung vorliegt
+    dir: 'de-en',      // de-en = selbst sagen wollen | en-de = gehört, verstehen wollen (Hör-Karte)
+    learn: true,       // false = nur übersetzt, kommt nicht beim Üben dran
     interval: 0,
     streak: 0,
     reps: 0,
@@ -136,7 +138,7 @@ export async function importData(data) {
   const existing = new Map((await getAll('phrases')).map((p) => [p.id, p]));
   let added = 0, updated = 0;
   for (const p of data.phrases) {
-    if (!p.id || !p.de) continue;
+    if (!p.id || (!p.de && !p.en)) continue;
     const old = existing.get(p.id);
     if (!old) { await put('phrases', makePhrase(p)); added++; }
     else if ((p.updated || 0) > (old.updated || 0)) { await put('phrases', { ...old, ...p }); updated++; }

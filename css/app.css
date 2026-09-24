@@ -361,3 +361,11 @@ code { font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border
 
 .tabs svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tabs span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Übersetzer: Richtung */
+.dir-switch { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 600; }
+.dir-switch span:first-child { text-align: right; }
+.dir-switch .swap { min-width: 56px; font-size: 1.3rem; padding: 6px 12px; }
+.out-de { font-size: 1.35rem; font-weight: 600; margin: 0; }
+.literal.en-read { color: var(--text); font-size: 1.25rem; font-weight: 600; }
+.listen-again { min-height: 64px; font-size: 1.05rem; }
