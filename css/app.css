@@ -69,7 +69,7 @@ button:disabled { opacity: 0.4; cursor: default; }
 .icon-btn { background: none; min-height: 40px; padding: 4px 8px; font-size: 1.2rem; }
 
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
-.row > button { flex: 1 1 0; }
+.row > button { flex: 1 1 0; min-width: 0; }
 .stack { display: grid; gap: 10px; margin-top: 20px; }
 
 /* ---------- Navigation ---------- */
@@ -84,6 +84,9 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 .tabs button {
   flex: 1;
+  min-width: 0;
+  padding: 12px 2px;
+  font-size: 0.8rem;
   background: none;
   border-radius: 0;
   color: var(--muted);
@@ -139,7 +142,7 @@ button:disabled { opacity: 0.4; cursor: default; }
   flex-direction: column;
   min-height: calc(100dvh - 64px - env(safe-area-inset-bottom) - 40px);
 }
-.controls { display: grid; gap: 10px; margin-top: auto; padding-top: 20px; justify-items: stretch; }
+.controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: auto; padding-top: 20px; justify-items: stretch; }
 .controls .row { width: 100%; }
 .help { justify-self: center; min-width: 50%; }
 .hint { text-align: center; margin: 12px 0 0; }
@@ -151,8 +154,8 @@ button:disabled { opacity: 0.4; cursor: default; }
 .meter canvas { flex: 1; height: 48px; width: 100%; }
 
 .links { justify-content: center; }
-.links { gap: 0; flex-wrap: nowrap; }
-.links > .link { flex: 0 1 auto; font-size: 0.9rem; padding: 6px 10px; white-space: nowrap; }
+.links { gap: 0 4px; flex-wrap: wrap; }
+.links > .link { flex: 0 1 auto; font-size: 0.9rem; padding: 6px 8px; white-space: nowrap; }
 
 .accent-soft { background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent); font-weight: 600; }
 .play .playing { background: var(--accent); color: var(--on-accent); }
@@ -178,7 +181,7 @@ button:disabled { opacity: 0.4; cursor: default; }
 .grade-bad { background: transparent; border: 1px solid var(--bad); color: var(--bad); }
 .grade-good { background: var(--good); color: var(--on-accent); }
 .grade-mid { background: transparent; border: 1px solid var(--muted); color: var(--text); }
-.grade button:disabled { opacity: 0.25; }
+.grade button:disabled { opacity: 0.35; background: transparent; border: 1px dashed var(--line); color: var(--muted); }
 
 .done { padding-top: 32px; }
 .finding { font-size: 1.1rem; }

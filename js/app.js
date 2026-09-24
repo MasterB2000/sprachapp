@@ -4,6 +4,7 @@ import * as db from './db.js';
 import * as review from './review.js';
 import * as capture from './capture.js';
 import * as library from './library.js';
+import * as settings from './settings.js';
 import { registerSource } from './translate.js';
 import { bergamotSource, warmUp } from './bergamot.js';
 import * as voice from './voice.js';
@@ -11,7 +12,7 @@ import { applyFontScale } from './ui.js';
 
 registerSource(bergamotSource);
 
-const views = { review, capture, library };
+const views = { review, capture, library, settings };
 const main = document.getElementById('view');
 const tabs = document.querySelectorAll('.tabs button');
 let active = null;
