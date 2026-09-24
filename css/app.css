@@ -229,3 +229,14 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   pointer-events: none;
 }
 .toast.show { opacity: 1; transform: none; }
+
+select {
+  flex: 2 1 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  min-height: 48px;
+}

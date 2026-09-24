@@ -1,12 +1,13 @@
 // Speicherung im Browser (IndexedDB) plus Export/Import als JSON-Datei.
 //
-// Drei Ablagen:
+// Vier Ablagen:
 //   phrases    – die Wendungen (eine Zeile pro Satz)
 //   recordings – die letzte eigene Aufnahme je Wendung
 //   settings   – Einstellungen und Merker
+//   tts        – erzeugte Musterstimme je Stimme und Satz (jederzeit neu erzeugbar)
 
 const DB_NAME = 'sprachapp';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise = null;
 
@@ -19,6 +20,7 @@ function openDb() {
       if (!db.objectStoreNames.contains('phrases')) db.createObjectStore('phrases', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('recordings')) db.createObjectStore('recordings', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('tts')) db.createObjectStore('tts', { keyPath: 'key' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

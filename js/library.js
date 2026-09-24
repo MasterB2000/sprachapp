@@ -4,6 +4,8 @@ import * as db from './db.js';
 import * as srs from './srs.js';
 import { buildRefinePrompt, parseResponse } from './prompt.js';
 import { renderDecode } from './decode.js';
+import * as audio from './audio.js';
+import * as voice from './voice.js';
 import { h, esc, toast, formatDay } from './ui.js';
 
 const PROMPT_BATCH = 25;
@@ -27,6 +29,7 @@ async function render() {
   const due = phrases.filter((p) => srs.isDue(p, day)).length;
   const fresh = phrases.filter(srs.isNew).length;
   const unrefined = phrases.filter((p) => !p.refined);
+  const currentVoice = await voice.getVoice();
 
   root.innerHTML = '';
   root.appendChild(h(`
@@ -48,6 +51,17 @@ async function render() {
       </div>
 
       <div class="panel">
+        <h3>Stimme</h3>
+        <div class="row">
+          <select data-voice>
+            ${voice.VOICES.map((v) => `<option value="${v.id}" ${v.id === currentVoice ? 'selected' : ''}>${v.label}</option>`).join('')}
+          </select>
+          <button class="secondary" data-voice-try>Probe hören</button>
+        </div>
+        <p class="muted small" data-voice-state>${voiceState()}</p>
+      </div>
+
+      <div class="panel">
         <h3>Sichern</h3>
         <div class="row">
           <button class="secondary" data-export>Exportieren</button>
@@ -63,6 +77,7 @@ async function render() {
   `));
 
   bindRefine(unrefined.slice(0, PROMPT_BATCH));
+  bindVoice();
   bindBackup();
   renderList(phrases);
 }
@@ -153,6 +168,44 @@ async function applyRefined() {
   toast(`${parsed.length} Wendungen veredelt.`);
   parsed = null;
   await render();
+}
+
+// ---------- Stimme ----------
+
+const SAMPLE = "I'm looking forward to the weekend. We could bake some bread together.";
+
+function voiceState() {
+  return {
+    idle: 'Wird beim nächsten Start geladen.',
+    loading: 'Wird geladen – beim ersten Mal ca. 115 MB, danach offline.',
+    ready: 'Bereit, läuft offline.',
+    failed: 'Konnte nicht geladen werden – solange spricht die Systemstimme.',
+  }[voice.status()];
+}
+
+function bindVoice() {
+  const select = root.querySelector('[data-voice]');
+  const btn = root.querySelector('[data-voice-try]');
+  const stateEl = root.querySelector('[data-voice-state]');
+
+  select.addEventListener('change', () => voice.setVoice(select.value));
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Erzeuge …';
+    try {
+      voice.warmUp();
+      const blob = await voice.getAudio(SAMPLE, select.value);
+      await audio.playBlob(blob);
+    } catch (err) {
+      toast('Stimme nicht verfügbar: ' + err.message);
+    } finally {
+      if (root) {
+        btn.disabled = false;
+        btn.textContent = 'Probe hören';
+        stateEl.textContent = voiceState();
+      }
+    }
+  });
 }
 
 // ---------- Sichern ----------

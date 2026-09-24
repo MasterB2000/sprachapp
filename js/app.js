@@ -6,6 +6,7 @@ import * as capture from './capture.js';
 import * as library from './library.js';
 import { registerSource } from './translate.js';
 import { bergamotSource, warmUp } from './bergamot.js';
+import * as voice from './voice.js';
 
 registerSource(bergamotSource);
 
@@ -37,6 +38,7 @@ async function init() {
   await show('review');
   // Übersetzer im Hintergrund laden – so liegt er auch offline bereit, bevor er gebraucht wird.
   setTimeout(warmUp, 3000);
+  setTimeout(voice.warmUp, 6000);
 }
 
 init();

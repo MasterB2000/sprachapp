@@ -4,6 +4,7 @@
 import * as db from './db.js';
 import * as srs from './srs.js';
 import * as audio from './audio.js';
+import * as voice from './voice.js';
 import { renderDecode, fadeAlong, showAll, cancelFade } from './decode.js';
 import { h, esc, toast, formatDay } from './ui.js';
 
@@ -53,6 +54,8 @@ async function startRound(extra) {
   const queue = srs.buildQueue(phrases, { newPerDay: NEW_PER_DAY, ignoreNewLimit: extra });
   Object.assign(s, { queue, started: Date.now(), done: 0, firstTry: 0, retried: new Set() });
   if (!queue.length) return renderEmpty(phrases);
+  // Stimme für die ganze Runde der Reihe nach im Hintergrund erzeugen.
+  queue.forEach((q) => voice.prepare(q.en));
   showCard();
 }
 

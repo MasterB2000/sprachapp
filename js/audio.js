@@ -1,6 +1,26 @@
 // Aufnahme, Wiedergabe und Sprachausgabe.
 
-// ---------- Sprachausgabe (Musterstimme) ----------
+import * as voice from './voice.js';
+
+// ---------- Musterstimme ----------
+// Englisch: Kokoro (natürlich, offline). Solange Kokoro noch lädt oder scheitert: Systemstimme.
+// Deutsch: Systemstimme.
+
+export async function speak(text, { lang = 'en', rate = 1 } = {}) {
+  if (lang === 'en' && text) {
+    try {
+      const hit = await voice.cached(text);
+      if (hit) return playBlob(hit, { rate });
+      if (voice.status() === 'ready') return playBlob(await voice.getAudio(text), { rate });
+      voice.prepare(text); // fürs nächste Mal
+    } catch (err) {
+      console.warn('Kokoro nicht verfügbar:', err);
+    }
+  }
+  return systemSpeak(text, { lang, rate });
+}
+
+// ---------- Systemstimme (Rückfallebene) ----------
 
 let voices = [];
 
@@ -24,7 +44,7 @@ function pickVoice(lang) {
   return null;
 }
 
-export function speak(text, { lang = 'en', rate = 1 } = {}) {
+function systemSpeak(text, { lang = 'en', rate = 1 } = {}) {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window) || !text) return resolve();
     speechSynthesis.cancel();
@@ -41,6 +61,7 @@ export function speak(text, { lang = 'en', rate = 1 } = {}) {
 
 export function stopSpeaking() {
   if ('speechSynthesis' in window) speechSynthesis.cancel();
+  stopPlayback();
 }
 
 // ---------- Aufnahme ----------
@@ -82,12 +103,13 @@ export const isRecording = () => Boolean(recorder && recorder.state === 'recordi
 
 let current = null;
 
-export function playBlob(blob) {
+export function playBlob(blob, { rate = 1 } = {}) {
   return new Promise((resolve) => {
     if (!blob) return resolve();
     stopPlayback();
     const url = URL.createObjectURL(blob);
     current = new Audio(url);
+    current.playbackRate = rate; // Tonhöhe bleibt erhalten
     const done = () => { URL.revokeObjectURL(url); current = null; resolve(); };
     current.onended = done;
     current.onerror = done;
