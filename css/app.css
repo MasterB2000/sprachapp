@@ -232,20 +232,26 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .list-head { display: flex; align-items: baseline; justify-content: space-between; }
 .list-head .link { min-height: 36px; }
 
-/* Zeigen-Modus: Satz bildschirmfüllend */
-.show-big {
+/* Vollbild-Ansichten: Zeigen und Bearbeiten */
+.overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 24px;
-  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  overflow-y: auto;
 }
-.big-en { font-size: clamp(2rem, 9vw, 3.4rem); font-weight: 700; line-height: 1.2; margin: 0; overflow-wrap: anywhere; }
-.big-de { color: var(--muted); font-size: 1.1rem; margin: 0; }
+.overlay-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; background: var(--bg); padding-bottom: 4px; }
+.slim { width: auto; min-height: 44px; padding: 8px 16px; }
+.overlay .close { font-size: 1.6rem; min-width: 52px; min-height: 52px; color: var(--text); }
+.big-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px; }
+.big-en { font-weight: 700; line-height: 1.2; margin: 0; overflow-wrap: anywhere; }
+.big-de { color: var(--muted); font-size: 1rem; margin: 0; }
+.big-de summary { cursor: pointer; }
+.editor textarea { font-size: 1.15rem; min-height: 120px; resize: none; overflow: hidden; }
 .recent .de { color: var(--muted); font-size: 0.9rem; }
 
 /* ---------- Speicher ---------- */
@@ -276,6 +282,7 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .toast {
   position: fixed;
+  z-index: 60;
   left: 16px;
   right: 16px;
   top: calc(12px + env(safe-area-inset-top));

@@ -7,17 +7,16 @@ import * as db from './db.js';
 import * as audio from './audio.js';
 import { translate } from './translate.js';
 import { renderDecode } from './decode.js';
-import { h, esc, toast } from './ui.js';
+import { h, esc, toast, openOverlay, closeOverlay } from './ui.js';
 
 const RECENT = 15;
 
 let root = null;
 let openId = null;   // aufgeklappter Satz
-let editId = null;   // Satz in Bearbeitung
 
 export async function enter(el) {
   root = el;
-  openId = editId = null;
+  openId = null;
   root.innerHTML = '';
   root.appendChild(h(`
     <section class="capture">
@@ -65,7 +64,7 @@ export async function enter(el) {
 
 export function leave() {
   audio.stopSpeaking();
-  closeShow();
+  closeOverlay();
   root = null;
 }
 
@@ -143,7 +142,7 @@ function fillList(ul, phrases, pinnedList) {
       </li>
     `);
     li.querySelector('.texts').addEventListener('click', () => toggleOpen(p.id));
-    if (openId === p.id) li.appendChild(editId === p.id ? editForm(p) : actions(p));
+    if (openId === p.id) li.appendChild(actions(p));
     if (pinnedList) enableDrag(li.querySelector('.grip'), li, ul);
     ul.appendChild(li);
   }
@@ -151,7 +150,6 @@ function fillList(ul, phrases, pinnedList) {
 
 function toggleOpen(id) {
   openId = openId === id ? null : id;
-  editId = null;
   renderLists();
 }
 
@@ -162,7 +160,8 @@ function actions(p) {
       <button class="secondary" data-a="share" ${p.en && navigator.share ? '' : 'hidden'}>↗ Teilen</button>
       <button class="secondary" data-a="say" ${p.en ? '' : 'disabled'}>🔈 Anhören</button>
       <button class="secondary" data-a="show" ${p.en ? '' : 'disabled'}>⛶ Zeigen</button>
-      <button class="secondary" data-a="edit">✎ Bearbeiten</button>
+      <button class="secondary" data-a="edit-de">✎ Deutsch</button>
+      <button class="secondary" data-a="edit-en">✎ Englisch</button>
       <button class="secondary" data-a="pin">${p.pinned ? '📌 Lösen' : '📌 Anpinnen'}</button>
       <button class="secondary danger-soft" data-a="del">✕ Löschen</button>
     </div>
@@ -172,7 +171,8 @@ function actions(p) {
   on('share', () => navigator.share({ text: p.en }).catch(() => {}));
   on('say', () => audio.speak(p.en, { rate: 0.95 }));
   on('show', () => showBig(p));
-  on('edit', () => { editId = p.id; renderLists(); });
+  on('edit-de', () => openEditor(p, 'de'));
+  on('edit-en', () => openEditor(p, 'en'));
   on('pin', () => togglePin(p));
   on('del', () => removePhrase(p));
   return el;
@@ -197,46 +197,53 @@ async function copy(text) {
 }
 
 // ---------- Bearbeiten ----------
+// Eigene Ansicht mit nur einem Feld, Speichern oben (die Tastatur verdeckt es so nie).
 // Deutsch geändert → neu übersetzen. Englisch geändert → gilt als von dir korrigiert
 // und wird beim Veredeln nicht mehr überschrieben (nur die wörtliche Zeile kommt dazu).
 
-function editForm(p) {
+function openEditor(p, lang) {
   const el = h(`
-    <div class="edit">
-      <label class="field"><span class="muted small">Deutsch</span><textarea rows="2" data-e-de>${esc(p.de)}</textarea></label>
-      <label class="field"><span class="muted small">Englisch – z. B. so, wie es dir jemand korrigiert hat</span><textarea rows="2" data-e-en>${esc(p.en)}</textarea></label>
-      <div class="row">
-        <button class="secondary" data-e-cancel>Abbrechen</button>
-        <button class="primary" data-e-save>Speichern</button>
+    <div class="overlay editor" role="dialog" aria-label="Bearbeiten">
+      <div class="overlay-bar">
+        <button class="link" data-e-cancel>Abbrechen</button>
+        <b>${lang === 'de' ? 'Deutsch ändern' : 'Englisch ändern'}</b>
+        <button class="primary slim" data-e-save>Speichern</button>
       </div>
+      <p class="muted small">${lang === 'de'
+        ? 'Danach wird der Satz neu übersetzt.'
+        : 'Zum Beispiel so, wie es dir jemand korrigiert hat. Deine Fassung bleibt dann geschützt.'}</p>
+      <textarea data-e-text rows="3" spellcheck="true"></textarea>
+      ${lang === 'en' ? `<p class="muted small">Deutsch: ${esc(p.de)}</p>` : ''}
     </div>
   `);
-  el.querySelector('[data-e-cancel]').addEventListener('click', () => { editId = null; renderLists(); });
-  el.querySelector('[data-e-save]').addEventListener('click', () => saveEdit(p, el));
-  return el;
+  const ta = el.querySelector('[data-e-text]');
+  ta.value = lang === 'de' ? p.de : p.en;
+  const grow = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  ta.addEventListener('input', grow);
+  el.querySelector('[data-e-cancel]').addEventListener('click', closeOverlay);
+  el.querySelector('[data-e-save]').addEventListener('click', () => saveEdit(p, lang, ta.value.trim(), el));
+  openOverlay(el);
+  grow();
+  ta.focus();
 }
 
-async function saveEdit(p, el) {
-  const de = el.querySelector('[data-e-de]').value.trim();
-  const en = el.querySelector('[data-e-en]').value.trim();
-  if (!de) return toast('Der deutsche Satz darf nicht leer sein.');
-  const deChanged = de !== p.de;
-  const enChanged = en !== p.en;
-  if (!deChanged && !enChanged) { editId = null; return renderLists(); }
+async function saveEdit(p, lang, text, el) {
+  const old = lang === 'de' ? p.de : p.en;
+  if (text === old) return closeOverlay();
+  if (!text && lang === 'de') return toast('Der deutsche Satz darf nicht leer sein.');
 
   const fresh = await db.get('phrases', p.id);
-  fresh.de = de;
-  if (enChanged && en) {
-    Object.assign(fresh, { en, human: true, decode: null, refined: false, source: 'mensch' });
-  } else if (deChanged) {
+  if (lang === 'en') {
+    Object.assign(fresh, { en: text, human: Boolean(text), decode: null, refined: false, source: text ? 'mensch' : 'offen' });
+  } else {
     el.querySelector('[data-e-save]').textContent = 'Übersetze …';
-    const result = await translate(de);
-    Object.assign(fresh, { en: result?.en || '', human: false, decode: null, refined: false, source: result?.source || 'offen' });
+    const result = await translate(text);
+    Object.assign(fresh, { de: text, en: result?.en || '', human: false, decode: null, refined: false, source: result?.source || 'offen' });
   }
   fresh.updated = Date.now();
   await db.put('phrases', fresh);
-  editId = null;
-  toast(enChanged ? 'Gespeichert – deine Fassung bleibt.' : 'Neu übersetzt und gespeichert.');
+  closeOverlay();
+  toast(lang === 'en' ? 'Gespeichert – deine Fassung bleibt.' : 'Neu übersetzt und gespeichert.');
   renderLists();
 }
 
@@ -293,28 +300,33 @@ function enableDrag(grip, li, ul) {
 }
 
 // ---------- Zeigen-Modus ----------
-// Englischer Satz bildschirmfüllend – zum Hinhalten im Gespräch. Antippen schließt.
+// Englischer Satz bildschirmfüllend – zum Hinhalten im Gespräch.
+// ✕ oben rechts und die Zurück-Geste schließen. Die Schrift passt sich der Länge an.
+
+function bigSize(text) {
+  const n = text.length;
+  return n < 40 ? 3.2 : n < 90 ? 2.6 : n < 180 ? 2.1 : n < 320 ? 1.8 : 1.4;
+}
 
 function showBig(p) {
-  closeShow();
+  const longDe = p.de.length > 120;
   const el = h(`
-    <div class="show-big" role="dialog" aria-label="Satz zeigen">
-      <p class="big-en">${esc(p.en)}</p>
-      <p class="big-de">${esc(p.de)}</p>
-      <div class="row">
-        <button class="secondary" data-big-say>🔈 Anhören</button>
-        <button class="primary" data-big-close>Schließen</button>
+    <div class="overlay show-big" role="dialog" aria-label="Satz zeigen">
+      <div class="overlay-bar">
+        <button class="secondary slim" data-big-say>🔈 Anhören</button>
+        <button class="icon-btn close" data-big-close aria-label="Schließen">✕</button>
+      </div>
+      <div class="big-body">
+        <p class="big-en" style="font-size:${bigSize(p.en)}rem">${esc(p.en)}</p>
+        ${longDe
+          ? `<details class="big-de"><summary>Deutsch anzeigen</summary>${esc(p.de)}</details>`
+          : `<p class="big-de">${esc(p.de)}</p>`}
       </div>
     </div>
   `);
-  el.querySelector('[data-big-say]').addEventListener('click', (e) => { e.stopPropagation(); audio.speak(p.en, { rate: 0.9 }); });
-  el.querySelector('[data-big-close]').addEventListener('click', closeShow);
-  el.addEventListener('click', (e) => { if (e.target === el || e.target.classList.contains('big-en')) closeShow(); });
-  document.body.appendChild(el);
-}
-
-function closeShow() {
-  document.querySelector('.show-big')?.remove();
+  el.querySelector('[data-big-say]').addEventListener('click', () => audio.speak(p.en, { rate: 0.9 }));
+  el.querySelector('[data-big-close]').addEventListener('click', closeOverlay);
+  openOverlay(el);
 }
 
 // ---------- Löschen ----------

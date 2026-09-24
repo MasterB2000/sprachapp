@@ -29,6 +29,29 @@ export function toast(msg, { action = null, ms = 3200 } = {}) {
   toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
+// ---------- Vollbild-Ansichten (Zeigen, Bearbeiten) ----------
+// Die Zurück-Taste bzw. -Geste von Android schließt sie, wie man es erwartet.
+
+let overlay = null;
+
+export function openOverlay(el) {
+  if (overlay) overlay.remove();
+  else history.pushState({ overlay: true }, '');
+  overlay = el;
+  document.body.appendChild(el);
+}
+
+export function closeOverlay() {
+  if (!overlay) return;
+  overlay.remove();
+  overlay = null;
+  if (history.state?.overlay) history.back();
+}
+
+window.addEventListener('popstate', () => {
+  if (overlay) { overlay.remove(); overlay = null; }
+});
+
 export const FONT_SCALES = [1, 1.15, 1.3];
 
 export function applyFontScale(v) {
