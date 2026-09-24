@@ -278,3 +278,37 @@ select {
   padding: 10px 12px;
   min-height: 48px;
 }
+
+/* ---------- Stimmen ---------- */
+
+input[type="password"], input[type="text"] {
+  flex: 2 1 0;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  min-height: 48px;
+}
+.voice-head { margin: 16px 0 6px; }
+.voice-list, .voice-list ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.voice-group summary { cursor: pointer; padding: 6px 0; }
+.voice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 6px 6px 6px 12px;
+}
+.voice-item.active { border-color: var(--accent); }
+.voice-item label { flex: 1; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; cursor: pointer; }
+.voice-item input[type="radio"] { grid-row: span 2; accent-color: var(--accent); width: 20px; height: 20px; }
+.voice-item .try { min-width: 48px; min-height: 44px; padding: 0; }
+.google { margin-top: 18px; }
+.google > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.google ol { padding-left: 20px; }
+code { font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }

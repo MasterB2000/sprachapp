@@ -19,6 +19,8 @@ export async function enter(el) {
 }
 
 export function leave() {
+  audio.stopSpeaking();
+  resetTry();
   root = null;
   parsed = null;
 }
@@ -29,7 +31,7 @@ async function render() {
   const due = phrases.filter((p) => srs.isDue(p, day)).length;
   const fresh = phrases.filter(srs.isNew).length;
   const unrefined = phrases.filter((p) => !p.refined);
-  const currentVoice = await voice.getVoice();
+  const googleKeySet = Boolean(await voice.googleKey());
   const literal = await db.getSetting('literal', 'tip');
   const fontScale = await db.getSetting('fontScale', 1);
 
@@ -71,15 +73,33 @@ async function render() {
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Stimme</h3>
-        <div class="row">
-          <select data-voice>
-            ${voice.VOICES.map((v) => `<option value="${v.id}" ${v.id === currentVoice ? 'selected' : ''}>${v.label}</option>`).join('')}
-          </select>
-          <button class="secondary" data-voice-try>Probe hören</button>
-        </div>
-        <p class="muted small" data-voice-state>${voiceState()}</p>
+      <div class="panel voices">
+        <h3>Stimmen</h3>
+        <p class="voice-head"><b>Englisch</b> <span class="muted small">– die Musterstimme</span></p>
+        <ul class="voice-list" data-list="en"></ul>
+        <p class="voice-head"><b>Deutsch</b> <span class="muted small">– liest die Fragen vor (🔈)</span></p>
+        <ul class="voice-list" data-list="de"></ul>
+
+        <details class="google" ${googleKeySet ? '' : 'open'}>
+          <summary>Google-Stimmen ${googleKeySet ? '<span class="muted small">(Schlüssel eingetragen)</span>' : '<span class="muted small">(eigener Schlüssel)</span>'}</summary>
+          <p class="muted small">Der Schlüssel wird nur auf diesem Gerät gespeichert und nie hochgeladen. Jeder Satz wird einmal online erzeugt und danach offline abgespielt.</p>
+          <div class="row">
+            <input type="password" data-gkey placeholder="${googleKeySet ? 'Neuen Schlüssel einfügen' : 'API-Schlüssel einfügen'}" autocomplete="off" spellcheck="false">
+            <button class="secondary" data-gsave>Speichern</button>
+          </div>
+          <p class="small" data-gstate></p>
+          ${googleKeySet ? '<button class="link small" data-gremove>Schlüssel entfernen</button>' : ''}
+          <label class="setting small"><span>Auch ältere Google-Stimmen zeigen</span><input type="checkbox" data-gall></label>
+          <details>
+            <summary class="small">So sicherst du den Schlüssel ab</summary>
+            <ol class="small muted">
+              <li>Eigenen Schlüssel nur für diese App anlegen (nicht den von anderen Programmen).</li>
+              <li>Anwendungseinschränkung: Websites → <code>https://masterb2000.github.io/*</code></li>
+              <li>API-Einschränkung: nur „Cloud Text-to-Speech API“.</li>
+              <li>Kontingent: Anfragen pro Tag begrenzen, z. B. auf 500.</li>
+            </ol>
+          </details>
+        </details>
       </div>
 
       <div class="panel">
@@ -205,41 +225,144 @@ function bindDisplay() {
   }));
 }
 
-// ---------- Stimme ----------
+// ---------- Stimmen ----------
 
-const SAMPLE = "I'm looking forward to the weekend. We could bake some bread together.";
+let showAllGoogle = false;
+let trying = null; // Knopf, dessen Probe gerade läuft
 
-function voiceState() {
-  return {
-    idle: 'Wird beim nächsten Start geladen.',
-    loading: 'Wird geladen – beim ersten Mal ca. 115 MB, danach offline.',
-    ready: 'Bereit, läuft offline.',
-    failed: 'Konnte nicht geladen werden – solange spricht die Systemstimme.',
-  }[voice.status()];
+const ACCENT = { 'en-GB': 'britisch', 'en-US': 'amerikanisch', 'de-DE': '' };
+
+// Alle wählbaren Stimmen einer Sprache, gruppiert.
+async function voiceOptions(lang) {
+  const groups = [];
+  if (lang === 'en') {
+    groups.push({
+      title: 'Offline',
+      items: voice.KOKORO_VOICES.map((v) => ({ sel: { provider: 'kokoro', id: v.id }, name: v.label, tag: `${v.accent} · offline` })),
+    });
+  } else {
+    groups.push({
+      title: 'Offline',
+      items: voice.PIPER_VOICES.map((v) => ({ sel: { provider: 'piper', id: v.id }, name: v.label, tag: `${v.note} · offline · einmalig ca. 80 MB` })),
+    });
+  }
+  const google = (await voice.googleVoices().catch(() => []))
+    .filter((v) => v.lang === lang && (showAllGoogle || v.best));
+  if (google.length) {
+    groups.push({
+      title: `Google (${google.length})`,
+      collapsed: true,
+      items: google.map((v) => ({
+        sel: { provider: 'google', id: v.id },
+        name: v.label,
+        tag: [ACCENT[v.code], v.gender, v.kind].filter(Boolean).join(' · '),
+      })),
+    });
+  }
+  groups.push({ title: 'Handy', items: [{ sel: { provider: 'system', id: '' }, name: 'Systemstimme', tag: 'Stimme des Handys' }] });
+  return groups;
+}
+
+const same = (a, b) => a.provider === b.provider && a.id === b.id;
+
+async function renderVoiceList(lang) {
+  const ul = root?.querySelector(`[data-list="${lang}"]`);
+  if (!ul) return;
+  const current = await voice.selected(lang);
+  const groups = await voiceOptions(lang);
+  ul.innerHTML = '';
+  for (const g of groups) {
+    const open = !g.collapsed || g.items.some((it) => same(it.sel, current));
+    const group = h(`<li class="voice-group"><details ${open ? 'open' : ''}><summary class="muted small">${esc(g.title)}</summary><ul></ul></details></li>`);
+    const inner = group.querySelector('ul');
+    for (const it of g.items) {
+      const active = same(it.sel, current);
+      const li = h(`
+        <li class="voice-item ${active ? 'active' : ''}">
+          <label>
+            <input type="radio" name="voice-${lang}" ${active ? 'checked' : ''}>
+            <span class="voice-name">${esc(it.name)}</span>
+            <span class="muted small">${esc(it.tag)}</span>
+          </label>
+          <button class="secondary try" title="Probe hören">▶</button>
+        </li>
+      `);
+      li.querySelector('input').addEventListener('change', async () => {
+        await voice.select(lang, it.sel);
+        voice.warmUp();
+        ul.querySelectorAll('.voice-item').forEach((x) => x.classList.toggle('active', x === li));
+      });
+      li.querySelector('.try').addEventListener('click', (e) => tryVoice(e.currentTarget, lang, it.sel));
+      inner.appendChild(li);
+    }
+    ul.appendChild(group);
+  }
+}
+
+async function tryVoice(btn, lang, sel) {
+  audio.stopSpeaking();
+  if (trying === btn) { resetTry(); return; }
+  resetTry();
+  trying = btn;
+  btn.textContent = '…';
+  try {
+    if (sel.provider === 'system') {
+      btn.textContent = '■';
+      await audio.systemSpeak(voice.SAMPLES[lang], { lang });
+    } else {
+      const blob = await voice.getAudio(voice.SAMPLES[lang], lang, sel);
+      if (trying !== btn) return;
+      btn.textContent = '■';
+      await audio.playBlob(blob);
+    }
+  } catch (err) {
+    toast('Stimme nicht verfügbar: ' + err.message, { ms: 8000 });
+  } finally {
+    if (trying === btn) resetTry();
+  }
+}
+
+function resetTry() {
+  if (trying) trying.textContent = '▶';
+  trying = null;
 }
 
 function bindVoice() {
-  const select = root.querySelector('[data-voice]');
-  const btn = root.querySelector('[data-voice-try]');
-  const stateEl = root.querySelector('[data-voice-state]');
+  renderVoiceList('en');
+  renderVoiceList('de');
 
-  select.addEventListener('change', () => voice.setVoice(select.value));
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    btn.textContent = 'Erzeuge …';
+  const input = root.querySelector('[data-gkey]');
+  const state = root.querySelector('[data-gstate]');
+
+  root.querySelector('[data-gsave]').addEventListener('click', async () => {
+    if (!input.value.trim()) return;
+    await voice.setGoogleKey(input.value);
+    input.value = '';
+    state.textContent = 'Prüfe Schlüssel …';
     try {
-      voice.warmUp();
-      const blob = await voice.getAudio(SAMPLE, select.value);
-      await audio.playBlob(blob);
+      const list = await voice.googleVoices({ refresh: true });
+      state.textContent = `Schlüssel funktioniert – ${list.length} Stimmen gefunden. Du findest sie oben in den Listen unter „Google“.`;
+      renderVoiceList('en');
+      renderVoiceList('de');
     } catch (err) {
-      toast('Stimme nicht verfügbar: ' + err.message);
-    } finally {
-      if (root) {
-        btn.disabled = false;
-        btn.textContent = 'Probe hören';
-        stateEl.textContent = voiceState();
-      }
+      state.textContent = 'Google meldet: ' + err.message;
     }
+  });
+
+  root.querySelector('[data-gremove]')?.addEventListener('click', async () => {
+    if (!confirm('Google-Schlüssel von diesem Gerät entfernen?')) return;
+    await voice.setGoogleKey('');
+    await db.setSetting('google.voices', null);
+    for (const lang of ['en', 'de']) {
+      if ((await voice.selected(lang)).provider === 'google') await voice.select(lang, null);
+    }
+    await render();
+  });
+
+  root.querySelector('[data-gall]').addEventListener('change', (e) => {
+    showAllGoogle = e.target.checked;
+    renderVoiceList('en');
+    renderVoiceList('de');
   });
 }
 

@@ -3,19 +3,21 @@
 import * as voice from './voice.js';
 
 // ---------- Musterstimme ----------
-// Englisch: Kokoro (natürlich, offline). Solange Kokoro noch lädt oder scheitert: Systemstimme.
-// Deutsch: Systemstimme.
+// Die pro Sprache gewählte Stimme (siehe voice.js). Ist sie gerade nicht verfügbar
+// (lädt noch, kein Netz, Fehler), spricht die Systemstimme – der Satz wird fürs nächste Mal vorbereitet.
 
 export async function speak(text, { lang = 'en', rate = 1 } = {}) {
-  if (lang === 'en' && text) {
-    try {
-      const hit = await voice.cached(text);
+  if (!text) return;
+  try {
+    const sel = await voice.selected(lang);
+    if (sel.provider !== 'system') {
+      const hit = await voice.cached(text, sel);
       if (hit) return playBlob(hit, { rate });
-      if (voice.status() === 'ready') return playBlob(await voice.getAudio(text), { rate });
-      voice.prepare(text); // fürs nächste Mal
-    } catch (err) {
-      console.warn('Kokoro nicht verfügbar:', err);
+      if (voice.canGenerateNow(sel)) return playBlob(await voice.getAudio(text, lang, sel), { rate });
+      voice.prepare(text, lang);
     }
+  } catch (err) {
+    console.warn('Stimme nicht verfügbar:', err);
   }
   return systemSpeak(text, { lang, rate });
 }
@@ -44,14 +46,14 @@ function pickVoice(lang) {
   return null;
 }
 
-function systemSpeak(text, { lang = 'en', rate = 1 } = {}) {
+export function systemSpeak(text, { lang = 'en', rate = 1 } = {}) {
   return new Promise((resolve) => {
     if (!('speechSynthesis' in window) || !text) return resolve();
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    const voice = pickVoice(lang);
-    if (voice) u.voice = voice;
-    u.lang = voice ? voice.lang : (lang === 'en' ? 'en-GB' : 'de-DE');
+    const sysVoice = pickVoice(lang);
+    if (sysVoice) u.voice = sysVoice;
+    u.lang = sysVoice ? sysVoice.lang : (lang === 'en' ? 'en-GB' : 'de-DE');
     u.rate = rate;
     u.onend = () => resolve();
     u.onerror = () => resolve();
@@ -129,9 +131,14 @@ let current = null;
 // Spielt eine Aufnahme ab. Ergebnis: true = gespielt, sonst eine Fehlerbeschreibung.
 // Scheitert das Audio-Element (kommt auf manchen Handys bei eigenen Aufnahmen vor),
 // springt Web Audio ein.
-export async function playBlob(blob, { rate = 1 } = {}) {
+// normalize: leise Aufnahmen auf die Lautstärke der Musterstimme anheben (nur beim Abspielen).
+export async function playBlob(blob, { rate = 1, normalize = false } = {}) {
   if (!blob) return 'keine Aufnahme';
   if (!blob.size) return 'Aufnahme ist leer';
+  if (normalize) {
+    const result = await playWithWebAudio(blob, rate, true);
+    if (result === true || result === 'gestoppt') return result;
+  }
   const first = await playWithElement(blob, rate);
   if (first === true || first === 'gestoppt') return first;
   const second = await playWithWebAudio(blob, rate);
@@ -159,7 +166,7 @@ function playWithElement(blob, rate) {
   });
 }
 
-async function playWithWebAudio(blob, rate) {
+async function playWithWebAudio(blob, rate, normalize = false) {
   try {
     const ctx = new AudioContext();
     const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
@@ -168,7 +175,20 @@ async function playWithWebAudio(blob, rate) {
       const src = ctx.createBufferSource();
       src.buffer = buffer;
       src.playbackRate.value = rate;
-      src.connect(ctx.destination);
+      if (normalize) {
+        // Verstärken auf Ziel-Lautheit, Kompressor fängt Spitzen ab.
+        const gain = ctx.createGain();
+        gain.gain.value = loudnessGain(buffer);
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -18;
+        comp.knee.value = 12;
+        comp.ratio.value = 4;
+        comp.attack.value = 0.005;
+        comp.release.value = 0.15;
+        src.connect(gain).connect(comp).connect(ctx.destination);
+      } else {
+        src.connect(ctx.destination);
+      }
       const done = (result) => { if (current?.src !== src) return; current = null; ctx.close(); resolve(result); };
       current = { src, stop: () => { try { src.stop(); } catch {} done('gestoppt'); } };
       src.onended = () => done(true);
@@ -177,6 +197,24 @@ async function playWithWebAudio(blob, rate) {
   } catch (err) {
     return 'Web Audio: ' + (err.message || err.name);
   }
+}
+
+// Verstärkung, damit die gesprochenen Stellen etwa bei -18 dBFS liegen (so laut wie die Musterstimmen).
+// Stille zählt nicht mit: nur die lauteren Abschnitte von 20 ms gehen in die Messung ein.
+function loudnessGain(buffer) {
+  const data = buffer.getChannelData(0);
+  const frame = Math.round(buffer.sampleRate * 0.02);
+  const levels = [];
+  for (let i = 0; i + frame <= data.length; i += frame) {
+    let sum = 0;
+    for (let j = i; j < i + frame; j++) sum += data[j] * data[j];
+    levels.push(Math.sqrt(sum / frame));
+  }
+  const loudest = Math.max(...levels, 1e-6);
+  const voiced = levels.filter((l) => l > loudest * 0.15);
+  const rms = Math.sqrt(voiced.reduce((n, l) => n + l * l, 0) / Math.max(1, voiced.length));
+  const TARGET = 0.126; // -18 dBFS
+  return Math.min(12, Math.max(1, TARGET / Math.max(rms, 1e-6)));
 }
 
 export function stopPlayback() {

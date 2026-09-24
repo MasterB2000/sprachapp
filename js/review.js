@@ -3,7 +3,7 @@
 // Ablauf je Karte:
 //   1. Frage     – deutscher Satz; Sprechen oder Tipp (erst wörtlich, dann Lösung)
 //   2. Aufnahme  – Pegelbalken zeigt, dass das Mikrofon hört
-//   3. Auflösung – Englisch bleibt stehen; Muster / Ich / Vergleichen nur auf Knopfdruck
+//   3. Auflösung – Englisch bleibt stehen; Muster / Ich nur auf Knopfdruck
 //   4. Bewertung – Noch nicht / Wackelig / Sitzt (Tipp begrenzt die Bewertung)
 // "Nochmal versuchen" führt mit derselben Karte zurück zu 1.
 
@@ -18,13 +18,13 @@ const SESSION_MS = 10 * 60 * 1000;
 const NEW_PER_DAY = 8;
 const MAX_RECORD_MS = 30000;
 
-// Der eine Schieber: Tempo der Musterstimme und Pause beim Vergleichen.
+// Der eine Schieber: Tempo der Musterstimme.
 const LEVELS = {
-  1: { rate: 0.7, gap: 1200, label: 'sehr ruhig' },
-  2: { rate: 0.8, gap: 1000, label: 'ruhig' },
-  3: { rate: 0.9, gap: 800, label: 'normal' },
-  4: { rate: 1.0, gap: 600, label: 'zügig' },
-  5: { rate: 1.1, gap: 400, label: 'schnell' },
+  1: { rate: 0.7, label: 'sehr ruhig' },
+  2: { rate: 0.8, label: 'ruhig' },
+  3: { rate: 0.9, label: 'normal' },
+  4: { rate: 1.0, label: 'zügig' },
+  5: { rate: 1.1, label: 'schnell' },
 };
 
 const RATING_TEXT = { good: 'Sitzt', hard: 'Wackelig', again: 'Noch nicht' };
@@ -68,7 +68,7 @@ async function startRound(extra) {
   });
   if (!queue.length) return renderEmpty(phrases);
   // Stimme für die ganze Runde der Reihe nach im Hintergrund erzeugen.
-  queue.forEach((q) => voice.prepare(q.en));
+  queue.forEach((q) => { voice.prepare(q.en, 'en'); voice.prepare(q.de, 'de'); });
   clearInterval(ticker);
   ticker = setInterval(updateTimeline, 1000);
   showCard();
@@ -265,8 +265,7 @@ function reveal() {
   const c = controls(`
     <div class="row play">
       <button class="secondary" data-play="model" data-label="▶ Muster">▶ Muster</button>
-      <button class="accent-soft" data-play="compare" data-label="▶ Vergleichen" ${blob ? '' : 'disabled'}>▶ Vergleichen</button>
-      <button class="secondary" data-play="me" data-label="▶ Ich" ${blob ? '' : 'disabled'}>▶ Ich</button>
+      <button class="accent-soft" data-play="me" data-label="▶ Ich" ${blob ? '' : 'disabled'}>▶ Ich</button>
     </div>
     <div class="row links">
       <button class="link" data-retry>Nochmal versuchen</button>
@@ -293,7 +292,8 @@ function reveal() {
   play('model');
 }
 
-// Muster / Ich / Vergleichen. Nochmal antippen stoppt.
+// Muster / Ich. Nochmal antippen stoppt.
+// Die eigene Aufnahme wird beim Abspielen auf die Lautstärke des Musters angehoben.
 async function play(kind) {
   if (s.playing === kind) return stopAudio();
   stopAudio();
@@ -301,14 +301,10 @@ async function play(kind) {
   setPlaying(kind);
   const { phrase: p, blob } = s.card;
 
-  if (kind !== 'me') await audio.speak(p.en, { lang: 'en', rate: lv().rate });
-  if (token !== s.playToken) return;
-  if (kind === 'compare') {
-    await audio.wait(lv().gap);
-    if (token !== s.playToken) return;
-  }
-  if (kind !== 'model') {
-    const result = await audio.playBlob(blob);
+  if (kind === 'model') {
+    await audio.speak(p.en, { lang: 'en', rate: lv().rate });
+  } else {
+    const result = await audio.playBlob(blob, { normalize: true });
     if (result !== true && result !== 'gestoppt') toast('Deine Aufnahme ließ sich nicht abspielen (' + result + ').', { ms: 8000 });
   }
   if (token === s.playToken) setPlaying(null);

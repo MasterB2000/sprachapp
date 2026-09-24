@@ -2,7 +2,7 @@
 // Online: immer frisch aus dem Netz holen (Änderungen sind sofort da) und Kopie ablegen.
 // Offline: Kopie ausliefern.
 
-const CACHE = 'sprachapp-v8';
+const CACHE = 'sprachapp-v9';
 // Eigener Speicher für große Modelldateien: überlebt App-Updates, wird nur bei neuem Modell erhöht.
 const VENDOR_CACHE = 'sprachapp-vendor-v1';
 
@@ -21,6 +21,7 @@ const SHELL = [
   'js/bergamot.js',
   'js/voice.js',
   'js/voice-worker.js',
+  'js/piper-worker.js',
   'js/prompt.js',
   'js/review.js',
   'js/capture.js',
