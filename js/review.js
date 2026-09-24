@@ -35,15 +35,17 @@ let recordTimer = null;
 let ticker = null;
 let meterFrame = null;
 
-export async function enter(el) {
+export async function enter(el, opts = {}) {
   root = el;
   s = {
     level: await db.getSetting('level', 2),
     literal: await db.getSetting('literal', 'tip'), // tip | always | off
     playToken: 0,
     playing: null,
+    mode: 'plan', // plan = nach Wiederholungsplan | pinned = nur angepinnte, ändert den Plan nicht
   };
-  await startRound(false);
+  if (opts.mode === 'pinned') await startPinned();
+  else await startRound(false);
 }
 
 export function leave() {
@@ -62,6 +64,18 @@ const lv = () => LEVELS[s.level];
 async function startRound(extra) {
   const phrases = await db.getAll('phrases');
   const queue = srs.buildQueue(phrases, { newPerDay: NEW_PER_DAY, ignoreNewLimit: extra });
+  return beginRound(queue, 'plan', phrases);
+}
+
+// Nur die angepinnten Sätze in deiner Reihenfolge. Freies Üben: Bewertungen ändern den Plan nicht.
+async function startPinned() {
+  const phrases = await db.getAll('phrases');
+  const queue = phrases.filter((p) => p.pinned && p.en).sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0));
+  return beginRound(queue, 'pinned', phrases);
+}
+
+async function beginRound(queue, mode, phrases) {
+  s.mode = mode;
   Object.assign(s, {
     queue, started: Date.now(), done: 0, retried: new Set(),
     counts: { good: 0, hard: 0, again: 0 }, firstCard: true,
@@ -101,7 +115,7 @@ function showCard() {
     <section class="review">
       <div class="timeline"><span data-time></span></div>
       <header class="bar">
-        <span class="muted small">${s.card.retry ? 'zweiter Anlauf' : ''}</span>
+        <span class="muted small">${s.mode === 'pinned' ? '📌 Angepinnte · freies Üben' : ''}${s.card.retry ? ' zweiter Anlauf' : ''}</span>
         <label class="level">
           <span>Tempo: <b data-level-label>${lv().label}</b></span>
           <input type="range" min="1" max="5" step="1" value="${s.level}" data-level>
@@ -391,7 +405,13 @@ async function rate(rating) {
 
   s.queue.shift();
   let msg;
-  if (s.card.retry) {
+  if (s.mode === 'pinned') {
+    // Freies Üben: Plan bleibt unberührt. Was nicht saß, kommt in dieser Runde nochmal.
+    s.done++;
+    s.counts[rating]++;
+    if (rating === 'again' && !s.card.retry) { s.retried.add(p.id); s.queue.push(p); }
+    msg = rating === 'again' ? 'Kommt in dieser Runde nochmal.' : `${RATING_TEXT[rating]}.`;
+  } else if (s.card.retry) {
     // Zweiter Anlauf in derselben Runde ändert den Plan nicht mehr.
     msg = 'Zweiter Anlauf erledigt.';
   } else {
@@ -424,7 +444,8 @@ async function renderEnd() {
   const phrases = await db.getAll('phrases');
   const minutes = Math.max(1, Math.round((Date.now() - s.started) / 60000));
   const rest = s.queue.length;
-  const more = rest || srs.buildQueue(phrases, { ignoreNewLimit: true }).length;
+  const pinnedMode = s.mode === 'pinned';
+  const more = rest || pinnedMode || srs.buildQueue(phrases, { ignoreNewLimit: true }).length;
   const next = srs.nextDue(phrases);
   const { good, hard, again } = s.counts;
 
@@ -433,14 +454,25 @@ async function renderEnd() {
     <section class="done">
       <h2>Runde vorbei</h2>
       <p class="finding">${s.done} ${s.done === 1 ? 'Karte' : 'Karten'} in ${minutes} Min.: ${good} sitzen, ${hard} wackelig, ${again} noch nicht.</p>
-      ${next ? `<p class="muted">Als Nächstes: ${formatDay(next.date)} ${next.count} ${next.count === 1 ? 'Karte' : 'Karten'}.</p>` : ''}
-      ${rest ? `<p class="muted">Heute noch ${rest} offen – die laufen nicht weg.</p>` : ''}
+      ${pinnedMode ? '<p class="muted">Freies Üben – dein Wiederholungsplan bleibt, wie er war.</p>' : ''}
+      ${next && !pinnedMode ? `<p class="muted">Als Nächstes: ${formatDay(next.date)} ${next.count} ${next.count === 1 ? 'Karte' : 'Karten'}.</p>` : ''}
+      ${rest ? `<p class="muted">Noch ${rest} offen – die laufen nicht weg.</p>` : ''}
       <div class="stack">
-        ${more ? '<button class="primary" data-more>Noch eine Runde</button>' : ''}
+        ${more ? `<button class="primary" data-more>${pinnedMode && !rest ? 'Angepinnte nochmal' : 'Noch eine Runde'}</button>` : ''}
       </div>
     </section>
   `));
-  root.querySelector('[data-more]')?.addEventListener('click', () => (rest ? continueRound() : startRound(true)));
+  root.querySelector('[data-more]')?.addEventListener('click', () => (rest ? continueRound() : pinnedMode ? startPinned() : startRound(true)));
+  if (!pinnedMode) addPinnedButton(phrases);
+}
+
+// "Angepinnte üben", wenn es angepinnte Sätze gibt.
+function addPinnedButton(phrases) {
+  const n = phrases.filter((p) => p.pinned && p.en).length;
+  if (!n || !root) return;
+  const btn = h(`<button class="secondary">📌 Angepinnte üben (${n})</button>`);
+  btn.addEventListener('click', startPinned);
+  root.querySelector('.stack')?.appendChild(btn);
 }
 
 function renderEmpty(phrases) {
@@ -461,4 +493,5 @@ function renderEmpty(phrases) {
     </section>
   `));
   root.querySelector('[data-new]')?.addEventListener('click', () => startRound(true));
+  addPinnedButton(phrases);
 }

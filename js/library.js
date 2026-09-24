@@ -139,9 +139,10 @@ async function applyRefined() {
     const p = await db.get('phrases', it.id);
     if (!p) continue;
     // Lernstand bleibt, nur die Fassung wird ersetzt.
+    // Von Hand korrigierte Fassungen bleiben; die KI liefert dann nur die wörtliche Zeile.
     Object.assign(p, {
-      de: it.de || p.de,
-      en: it.en,
+      de: p.human ? p.de : it.de || p.de,
+      en: p.human ? p.en : it.en,
       decode: it.decode,
       note: it.note,
       source: 'prompt',

@@ -215,9 +215,37 @@ textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .result .de-sentence { margin: 0; font-size: 1.1rem; color: var(--muted); }
 
 .recent { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.recent li { display: flex; align-items: flex-start; gap: 8px; background: var(--surface); padding: 10px 6px 10px 12px; border-radius: 10px; }
-.recent .texts { flex: 1; display: grid; min-width: 0; }
-.recent .remove { color: var(--muted); min-width: 44px; min-height: 44px; font-size: 1rem; }
+.recent li { background: var(--surface); border-radius: 10px; }
+.recent li.muted { padding: 10px 12px; }
+.entry { border: 1px solid transparent; }
+.entry.open { border-color: var(--line); }
+.entry.dragging { opacity: 0.7; border-color: var(--accent); }
+.entry-row { display: flex; align-items: stretch; }
+.recent .texts { flex: 1; display: grid; gap: 2px; min-width: 0; text-align: left; background: none; padding: 10px 12px; min-height: 0; }
+.grip { display: flex; align-items: center; padding: 0 4px 0 12px; color: var(--muted); font-size: 1.3rem; touch-action: none; cursor: grab; user-select: none; }
+.actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 10px 10px; }
+.actions .wide { grid-column: 1 / -1; }
+.actions button { min-height: 44px; padding: 8px 4px; font-size: 0.9rem; }
+.danger-soft { color: var(--bad); }
+.edit { padding: 0 10px 10px; }
+.edit textarea { font-size: 1rem; }
+.list-head { display: flex; align-items: baseline; justify-content: space-between; }
+.list-head .link { min-height: 36px; }
+
+/* Zeigen-Modus: Satz bildschirmfüllend */
+.show-big {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+}
+.big-en { font-size: clamp(2rem, 9vw, 3.4rem); font-weight: 700; line-height: 1.2; margin: 0; overflow-wrap: anywhere; }
+.big-de { color: var(--muted); font-size: 1.1rem; margin: 0; }
 .recent .de { color: var(--muted); font-size: 0.9rem; }
 
 /* ---------- Speicher ---------- */

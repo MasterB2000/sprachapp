@@ -5,7 +5,7 @@ export function buildRefinePrompt(phrases) {
   const list = phrases.map((p) => ({
     id: p.id,
     de: p.de,
-    ...(p.en ? { entwurf: p.en } : {}),
+    ...(p.human ? { en_fest: p.en } : p.en ? { entwurf: p.en } : {}),
     ...(p.flagged ? { hinweis: 'Der Lernende findet diese Fassung komisch oder unnatürlich – bitte kritisch prüfen.' } : {}),
   }));
 
@@ -26,6 +26,7 @@ ANTWORTE AUSSCHLIESSLICH mit einem JSON-Array in genau dieser Form, ohne Einleit
 ]
 
 Die "id" jedes Eintrags unverändert übernehmen.
+Hat ein Eintrag "en_fest", wurde die englische Fassung von einem Menschen korrigiert: übernimm sie unverändert als "en" (auch "de" nicht ändern) und liefere nur "decode" und "note".
 
 Sätze:
 ${JSON.stringify(list, null, 2)}

@@ -17,15 +17,18 @@ const main = document.getElementById('view');
 const tabs = document.querySelectorAll('.tabs button');
 let active = null;
 
-async function show(name) {
+async function show(name, opts = {}) {
   if (active) views[active].leave();
   active = name;
   tabs.forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   main.innerHTML = '';
-  await views[name].enter(main);
+  await views[name].enter(main, opts);
 }
 
 tabs.forEach((t) => t.addEventListener('click', () => show(t.dataset.tab)));
+
+// Bildschirme können zu anderen wechseln, z. B. "Angepinnte üben" aus dem Übersetzer.
+window.addEventListener('navigate', (e) => show(e.detail.tab, e.detail));
 
 async function init() {
   if ('serviceWorker' in navigator) {
