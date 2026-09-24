@@ -315,3 +315,5 @@ input[type="password"], input[type="text"] {
 .google > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
 .google ol { padding-left: 20px; }
 code { font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+.retry { justify-self: center; width: 70%; font-weight: 600; }

@@ -267,8 +267,8 @@ function reveal() {
       <button class="secondary" data-play="model" data-label="▶ Muster">▶ Muster</button>
       <button class="accent-soft" data-play="me" data-label="▶ Ich" ${blob ? '' : 'disabled'}>▶ Ich</button>
     </div>
+    <button class="secondary retry" data-retry>↻ Nochmal versuchen</button>
     <div class="row links">
-      <button class="link" data-retry>Nochmal versuchen</button>
       ${p.note ? '<button class="link" data-why>Warum?</button>' : ''}
       <button class="link" data-odd>Komisch?</button>
     </div>
