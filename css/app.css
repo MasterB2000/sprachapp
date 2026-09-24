@@ -317,3 +317,4 @@ input[type="password"], input[type="text"] {
 code { font-size: 0.85em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
 
 .retry { justify-self: center; width: 70%; font-weight: 600; }
+.mic-small { min-height: 56px; font-size: 1rem; }

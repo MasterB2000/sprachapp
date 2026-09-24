@@ -205,7 +205,8 @@ async function toggleRecording() {
     }
     btn.classList.add('recording');
     root.querySelector('[data-mic-label]').textContent = 'Fertig';
-    root.querySelector('[data-help]').hidden = true;
+    const help = root.querySelector('[data-help]');
+    if (help) help.hidden = true;
     startMeter();
     recordTimer = setTimeout(toggleRecording, MAX_RECORD_MS);
   } else {
@@ -213,11 +214,25 @@ async function toggleRecording() {
     cancelAnimationFrame(meterFrame);
     btn.classList.remove('recording');
     const blob = await audio.stopRecording();
+    if (!root) return;
     if (!blob || blob.size < 500) toast('Die Aufnahme ist leer – das Mikrofon hat nichts geliefert.', { ms: 8000 });
-    s.card.blob = blob?.size ? blob : null;
-    if (blob) db.put('recordings', { id: s.card.phrase.id, blob, date: srs.today() });
-    reveal();
+    if (blob?.size) {
+      s.card.blob = blob;
+      db.put('recordings', { id: s.card.phrase.id, blob, date: srs.today() });
+    }
+    if (!s.card.revealed) return reveal();
+    // Nachgesprochen bei sichtbarer Lösung: nur "▶ Ich" freischalten, nichts spielt ungefragt.
+    root.querySelector('[data-meter]').hidden = true;
+    root.querySelector('[data-mic-label]').textContent = micLabel();
+    root.querySelector('[data-play="me"]').disabled = !s.card.blob;
   }
+}
+
+// Laufende Aufnahme verwerfen, z. B. wenn während der Aufnahme bewertet wird.
+function cancelRecording() {
+  clearTimeout(recordTimer);
+  cancelAnimationFrame(meterFrame);
+  if (audio.isRecording()) audio.stopRecording();
 }
 
 // Pegelbalken: die letzten Lautstärkewerte als Säulen, laufen von rechts nach links.
@@ -254,7 +269,13 @@ function startMeter() {
 
 // ---------- 3. Auflösung ----------
 
+// Mit sichtbarer Lösung nachsprechen: der Text bleibt stehen.
+function micLabel() {
+  return s.card.blob ? 'Nochmal sprechen' : 'Jetzt selbst sagen';
+}
+
 function reveal() {
+  s.card.revealed = true;
   const { phrase: p, blob, help } = s.card;
   showLiteral(false);
   const answer = root.querySelector('[data-answer]');
@@ -267,6 +288,14 @@ function reveal() {
       <button class="secondary" data-play="model" data-label="▶ Muster">▶ Muster</button>
       <button class="accent-soft" data-play="me" data-label="▶ Ich" ${blob ? '' : 'disabled'}>▶ Ich</button>
     </div>
+    <div class="meter" data-meter hidden>
+      <canvas data-canvas></canvas>
+      <span class="muted small" data-secs>0 s</span>
+    </div>
+    <button class="mic mic-small" data-mic>
+      <span class="mic-dot"></span>
+      <span data-mic-label>${micLabel()}</span>
+    </button>
     <button class="secondary retry" data-retry>↻ Nochmal versuchen</button>
     <div class="row links">
       ${p.note ? '<button class="link" data-why>Warum?</button>' : ''}
@@ -280,6 +309,8 @@ function reveal() {
     ${help ? `<p class="muted small">${help >= 2 ? 'Mit Lösung' : 'Mit Tipp'} geht höchstens „${help >= 2 ? 'Noch nicht' : 'Wackelig'}“ – kein Tadel, die Karte kommt nur bald wieder.</p>` : ''}
   `);
   c.querySelectorAll('[data-play]').forEach((b) => b.addEventListener('click', () => play(b.dataset.play)));
+  c.querySelector('[data-mic]').addEventListener('click', toggleRecording);
+  if (!audio.canRecord()) c.querySelector('[data-mic]').hidden = true;
   c.querySelector('[data-retry]').addEventListener('click', retry);
   c.querySelector('[data-why]')?.addEventListener('click', () => {
     const n = root.querySelector('[data-note]');
@@ -326,8 +357,10 @@ function setPlaying(kind) {
 }
 
 function retry() {
+  cancelRecording();
   stopAudio();
   s.card.blob = null;
+  s.card.revealed = false;
   root.querySelector('[data-answer]').hidden = true;
   root.querySelector('[data-note]').hidden = true;
   askPhase();
@@ -345,6 +378,7 @@ async function flagOdd() {
 // ---------- 4. Bewertung ----------
 
 async function rate(rating) {
+  cancelRecording();
   stopAudio();
   const p = s.queue[0];
   const undo = {
