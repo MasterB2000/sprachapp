@@ -17,18 +17,18 @@ index.html                Hülle, vier Reiter (Üben · Übersetzen · Sätze ·
 manifest.json, icons/     Startbildschirm-Symbol
 sw.js                     Service Worker: Offline-Speicher, COOP/COEP
 css/app.css               Gestaltung, Farbvariablen oben in :root
-data/start.json           Startlektion (IDs s01…s30, Feld "version")
+data/start.json           Startlektion (IDs s01…s40, Feld "version" – bei Änderung erhöhen)
 js/app.js                 Einstieg, Reiterwechsel; Ereignis 'navigate' {tab, mode}
 js/db.js                  IndexedDB, makePhrase, Export/Import, Löschen/Wiederherstellen
 js/srs.js                 Abstände, Tagesrunde (buildQueue), isReady/isDue/isNew
 js/ui.js                  h(), esc(), toast() mit Aktion, Vollbild-Ansichten, Schriftgröße
-js/review.js              Üben: Sprech- und Hör-Karten, freies Üben der Angepinnten
+js/review.js              Üben: Sprech- und Hör-Karten, Übersicht, freies Üben (FREE-Tabelle)
 js/capture.js             Übersetzen: Richtung ⇄, Klappmenü, Anpinnen/Verschieben, Bearbeiten, Zeigen
-js/library.js             Sätze: Überblick, Veredeln per Prompt, Export/Import, Liste
+js/library.js             Sätze: KI-Prüfung (SCOPES-Tabelle), Export/Import, Suche, Liste
 js/settings.js            Optionen: Anzeige, Stimmen-Manager, Google-Schlüssel
 js/translate.js           Übersetzer-Schnittstelle translate(text, {from, to})
 js/bergamot.js            Quelle Bergamot (offline)
-js/prompt.js              Veredeln: Prompt bauen, KI-Antwort großzügig einlesen
+js/prompt.js              KI-Prüfung: buildCheckPrompt, KI-Antwort großzügig einlesen
 js/decode.js              wörtliche Zeile (Birkenbihl) anzeigen
 js/audio.js               Aufnahme (ohne Filter), Pegel, Wiedergabe, Lautstärke angleichen, speak()
 js/voice.js               Stimmen je Sprache, Erzeugen + Speichern (Store 'tts')
@@ -53,21 +53,30 @@ Wichtige Felder einer Karte (`makePhrase` in `db.js`):
 | `decode` | `[[englisch, wörtlich-deutsch], …]` |
 | `note` | Erklärung hinter „Warum?“ |
 | `source` | start · bergamot · prompt · mensch · offen |
-| `refined` | hat eine geprüfte Fassung mit wörtlicher Zeile |
-| `human` | Übersetzung vom Nutzer korrigiert → beim Veredeln geschützt |
-| `flagged` | „Komisch?“ gedrückt → geht ins Veredeln |
+| `refined` | geprüft (KI-Prüfung oder Startlektion), mit wörtlicher Zeile |
+| `human` | Übersetzung vom Nutzer korrigiert → bei der KI-Prüfung geschützt |
+| `flagged` | „Komisch?“ gedrückt → erscheint in der KI-Prüfung |
 | `learn` | `false` = nur übersetzt, nicht üben |
 | `pinned`, `pinOrder` | angepinnt, eigene Reihenfolge |
-| `interval`, `streak`, `reps`, `lapses`, `due`, `firstSeen` | Wiederholungsplan |
+| `interval`, `streak`, `reps`, `lapses`, `due`, `firstSeen`, `lastRating` | Wiederholungsplan |
 
-Einstellungen (Auswahl): `level` (Tempo), `literal` (tip/always/off), `fontScale`,
+Einstellungen (Auswahl): `level` (Tempo), `sessionMinutes`, `allowUnchecked`, `literal` (tip/always/off), `fontScale`,
 `voice.en`, `voice.de` (`{provider, id}`), `google.key`, `google.voices`, `captureDir`.
 
 ## Wiederholung (`srs.js`)
 
 - Sitzt: Abstand ×2,5 (1 → 3 → 8 → 20 → 50 Tage). Wackelig: ×1,2. Noch nicht: 1 Tag.
-- Tagesrunde: erst Fälliges, dann max. 8 neue pro Tag. Runde endet nach 10 Min.
-- Geübt wird nur, was `isReady` ist: beide Sprachen vorhanden und `learn !== false`.
+- Tagesrunde: erst Fälliges, dann max. 8 neue pro Tag. Runde endet nach `sessionMinutes`.
+- Geübt wird nur, was `isReady` ist: beide Sprachen, `learn !== false` und geprüft
+  (`isChecked`: Hör-Karte, `refined` oder `human`) – außer `allowUnchecked` ist an
+  (`srs.setAllowUnchecked`, gesetzt in `app.js` und in den Optionen).
+- Freies Üben (`mode: 'free'`) ruft `srs.grade` nicht auf – der Plan bleibt unberührt.
+
+## Startlektion aktualisieren
+
+`data/start.json` ändern und `version` erhöhen. `db.seedStartLesson` ergänzt fehlende
+Karten und überschreibt bei vorhandenen nur `de`, `en`, `decode`, `note` (Lernstand
+bleibt), außer der Nutzer hat die Karte selbst korrigiert (`human`).
 
 ## Service Worker (`sw.js`) – wichtig
 
@@ -97,11 +106,14 @@ Einstellungen (Auswahl): `level` (Tempo), `literal` (tip/always/off), `fontScale
   Eintrag in `registry.json` mit Prüfsummen aus der Bergamot-Registry.
 - Weitere Quellen (PC/Ollama) später über `registerSource()`.
 
-## Veredeln (`prompt.js`)
+## KI-Prüfung (`prompt.js`, `library.js`)
 
 - Prompt fordert striktes JSON (`id, de, en, decode, note`). Einlesen großzügig:
   Codeblöcke, Text drumherum, Komma-Fehler, typografische Anführungszeichen (zuletzt).
-- `en_fest` / `de_fest` für vom Nutzer korrigierte Fassungen, `en_gehoert` für Hör-Sätze.
+- Felder im Prompt: `entwurf` (Maschine), `en_bisher`/`decode_bisher`/`note_bisher`
+  (schon geprüft → unverändert zurück, wenn gut), `en_fest`/`de_fest` (vom Nutzer
+  korrigiert, geschützt), `en_gehoert` (Hör-Satz), `hinweis` (komisch markiert).
+- Beim Übernehmen: `merged()` schützt `human`-Fassungen; setzt `refined`, löscht `flagged`.
 
 ## Testen
 
